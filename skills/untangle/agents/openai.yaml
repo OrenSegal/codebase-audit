@@ -1,5 +1,0 @@
-interface:
-  display_name: "Untangle Codebase"
-  short_description: "One-pass refactor so changes land in one place"
-policy:
-  allow_implicit_invocation: false

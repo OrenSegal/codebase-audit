@@ -18,6 +18,7 @@ Artifact: a survivor list (mutation or deletion that no test caught) and a class
   - *Flaky*: real sleeps, wall-clock time, network, shared state, order dependence. Inject the clock or the boundary.
   - *Earns its place*: goes red on a real regression. Keep.
 - **critical-gaps**: Each critical path no test exercises end to end through its public interface.
+- **contract** (when a client and a server ship separately): Tests that pin the shapes they exchange (schema snapshots, contract tests, generated types checked in CI), so a server change that would break the shipped client fails a build instead of a user.
 - **property-candidates**: Invariants a property-based or fuzz test would check better than examples: encode/decode round trips, idempotent operations, counters that never go negative, parsers fed arbitrary input.
 
 Done: every critical module went through delete-test and mutation, and every test in scope has a class and an action.
