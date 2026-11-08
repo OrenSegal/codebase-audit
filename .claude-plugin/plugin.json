@@ -18,5 +18,7 @@
   "skills": [
     "./skills/audit",
     "./skills/untangle"
-  ]
+  ],
+  "homepage": "https://github.com/OrenSegal/codebase-audit",
+  "repository": "https://github.com/OrenSegal/codebase-audit"
 }
