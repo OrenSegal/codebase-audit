@@ -1,0 +1,22 @@
+{
+  "name": "codebase-audit",
+  "version": "2.1.0",
+  "description": "Fingerprint a codebase, run the audit lenses its stack calls for in parallel or in sequence, verify every finding, cluster by root cause, deliver fixes as a ticketed map, then untangle the structure.",
+  "author": {
+    "name": "Oren Segal"
+  },
+  "license": "MIT",
+  "keywords": [
+    "audit",
+    "code-quality",
+    "refactoring",
+    "architecture",
+    "security",
+    "testing",
+    "ux"
+  ],
+  "skills": [
+    "./skills/audit",
+    "./skills/untangle"
+  ]
+}
