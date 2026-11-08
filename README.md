@@ -76,7 +76,7 @@ Everything goes to `.audit/` in the audited repo, ignored by its own `.gitignore
 Claude Code:
 
 ```bash
-claude plugin marketplace add ~/Documents/GitHub/codebase-audit
+claude plugin marketplace add OrenSegal/codebase-audit
 ```
 
 ```bash
