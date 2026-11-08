@@ -3,6 +3,11 @@ name: audit
 description: Audit a codebase through every lens its stack calls for, verify each finding, cluster them by root cause, deliver the fixes as a ticketed map, and untangle the structure.
 disable-model-invocation: true
 argument-hint: "[path] [--lens a,b] [--since REF] [--fix] [--untangle [area|ticket]] [--out DIR]"
+metadata:
+  openclaw:
+    homepage: https://github.com/OrenSegal/codebase-audit
+    requires:
+      bins: [python3, git]
 ---
 
 Run an adversarial audit of this codebase and finish it. Report and deliver first; change source code only with `--fix` or once the user picks fixes.
