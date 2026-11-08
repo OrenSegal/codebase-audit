@@ -1,0 +1,18 @@
+{
+  "name": "codebase-audit",
+  "owner": {
+    "name": "Oren Segal"
+  },
+  "metadata": {
+    "description": "Adversarial codebase audit and one-pass untangle skills."
+  },
+  "plugins": [
+    {
+      "name": "codebase-audit",
+      "source": "./",
+      "description": "Stack-aware adversarial codebase audit with verified, root-cause-clustered findings, plus a one-pass untangle refactor.",
+      "version": "2.1.0",
+      "license": "MIT"
+    }
+  ]
+}

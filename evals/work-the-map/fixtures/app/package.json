@@ -1,0 +1,1 @@
+{ "name": "webhook-app", "private": true, "scripts": { "test": "node --test" } }
