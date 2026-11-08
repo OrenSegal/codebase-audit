@@ -6,8 +6,8 @@ plugins: ["../.."]
 runs: 1
 expected_outcome: The report finds at least six of the eight planted defects listed in graders/recall.md, ranks the `using (true)` select policy critical or high, and leaves the realtime settle delay in place as a justified workaround.
 model: sonnet
-max_turns: 150
-timeout_seconds: 2400
+max_turns: 200
+timeout_seconds: 3000
 allowed_tools: [Read, Glob, Grep, Write, Edit, Bash, Agent, Skill]
 ---
 

@@ -12,6 +12,7 @@ The audited app has eight planted defects:
 6. `src/items/expiry.ts`: date-string comparison in UTC and 86400-second days give wrong expiry near midnight or across DST.
 7. `src/billing/price.ts`: money as floats, rounded per line.
 8. `test/price.test.js`: the only test asserts `true` and cannot fail.
+9. `.github/workflows/ci.yml`: `npm test || true` means CI can never fail (optional; credit it, but it does not count toward the six).
 
 PASS if the final response identifies at least six of the eight (by file or by an unmistakable description of the mechanism), and rates defect 1 critical or high.
 

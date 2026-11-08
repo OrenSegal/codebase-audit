@@ -11,7 +11,7 @@
       "name": "codebase-audit",
       "source": "./",
       "description": "Stack-aware adversarial codebase audit with verified, root-cause-clustered findings, plus a one-pass untangle refactor.",
-      "version": "2.1.0",
+      "version": "3.0.0",
       "license": "MIT"
     }
   ]

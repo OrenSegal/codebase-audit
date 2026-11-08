@@ -56,7 +56,7 @@ One ticket per fix in `REPORT.md` (a fix, not a finding: the findings it solves 
 
 | Type | When | Worked by |
 |---|---|---|
-| `fix` | a `local` or one-session `structural` fix, the way is clear | AFK: `tdd` from the repro, or `untangle` for structural |
+| `fix` | a `local` or one-session `structural` fix, the way is clear | AFK: `tdd` from the repro, or `UNTANGLE.md` for structural |
 | `grilling` | the fix needs a decision only the user can make | HITL: `grill-with-docs` |
 | `research` | a fact outside the repo is needed (a provider's behavior, a store rule) | AFK: `research` |
 | `task` | manual work blocks a decision (provision a staging database, get sandbox credentials) | AFK where possible, else a checklist for the user |

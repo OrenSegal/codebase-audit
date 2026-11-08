@@ -46,11 +46,43 @@ class PlanTest(unittest.TestCase):
         self.assertIn("3 subagents (budget 3)", text)
         self.assertNotIn("shard", text)
 
+    def test_more_lenses_than_budget_run_in_waves(self):
+        text = scan.plan(["types", "state", "failure"], {}, {}, [], 500, 2)
+        self.assertEqual(text, "parallel in waves: 3 lenses, at most 2 subagents at once, heaviest lenses first")
+
     def test_small_packages_fold_into_rest(self):
         per_file = {"big/a.ts": hits(types__catch_all=90), "tiny/b.ts": hits(types__catch_all=5),
                     "tiny2/c.ts": hits(types__catch_all=5)}
         text = scan.plan(["types"], {"types": 100}, per_file, ["big", "tiny", "tiny2"], 500, 4)
         self.assertIn("shard types into big, rest", text)
+
+
+class ToolsTest(unittest.TestCase):
+    def setUp(self):
+        self.repo = tempfile.mkdtemp()
+        for path in ("web/tsconfig.json", "web/nested/tsconfig.json", "api/tsconfig.json", "web/node_modules/.bin/tsc", "a.py"):
+            os.makedirs(os.path.dirname(os.path.join(self.repo, path)) or self.repo, exist_ok=True)
+            write(os.path.join(self.repo, path), "")
+
+    def tearDown(self):
+        shutil.rmtree(self.repo)
+
+    def runs(self, fired):
+        files = ["web/tsconfig.json", "web/nested/tsconfig.json", "api/tsconfig.json", "a.py"]
+        return [(t.name, folder, ok) for t, folder, ok in scan.relevant_tools(self.repo, files, fired)]
+
+    def test_package_tools_run_once_per_outermost_package_and_check_local_bins(self):
+        tsc = [r for r in self.runs({"types"}) if r[0] == "tsc"]
+        self.assertEqual(tsc, [("tsc", "api", False), ("tsc", "web", True)])
+
+    def test_root_tools_run_once_and_only_for_fired_lenses(self):
+        self.assertIn(("vulture", ".", scan.shutil.which("vulture") is not None), self.runs({"design"}))
+        self.assertNotIn("vulture", [r[0] for r in self.runs({"types"})])
+
+    def test_every_tool_row_parses(self):
+        tools = scan.load_tools()
+        self.assertTrue(tools)
+        self.assertTrue(all(t.runs_in in ("root", "package") for t in tools))
 
 
 class RouteTest(unittest.TestCase):

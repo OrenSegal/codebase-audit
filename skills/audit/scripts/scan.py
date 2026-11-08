@@ -4,10 +4,11 @@
 Usage:
   scan.py [root] [--since REF] [--lens a,b] [--budget N] [--max-sites N]   markdown report on stdout
   scan.py [root] --special                                                  special-case counts only
-  scan.py [root] --check                                                    signals <-> lenses consistency
+  scan.py [root] --check                                                    signals, tools <-> lenses consistency
 
-Every pattern lives in signals.tsv beside this file; a project adds its own rows (same six
-columns) in docs/agents/audit-signals.tsv. Scan sites are leads for hunters, never findings.
+Every pattern lives in signals.tsv beside this file, every analyzer in tools.tsv; a project adds its
+own signal rows (same six columns) in docs/agents/audit-signals.tsv. Sites and tool warnings are
+leads for hunters, never findings.
 shortcut: invoked as python3; on Windows run `py scan.py` until someone needs a launcher.
 """
 import argparse
@@ -16,12 +17,14 @@ import concurrent.futures
 import dataclasses
 import os
 import re
+import shutil
 import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 LENS_DIR = os.path.join(os.path.dirname(HERE), "lenses")
 LOCAL_SIGNALS = os.path.join("docs", "agents", "audit-signals.tsv")
+TOOLS = os.path.join(HERE, "tools.tsv")
 
 ALWAYS = ("types", "state", "failure", "security", "performance", "tests", "design")
 SEQUENTIAL_MAX_FILES = 150   # at or below this many source files, subagents cost more than they save
@@ -110,6 +113,57 @@ def load_lenses():
     return lenses
 
 
+@dataclasses.dataclass(frozen=True)
+class Tool:
+    name: str
+    lens: str          # the lens whose hunters read this tool's output
+    detect: re.Pattern # a file path matching this makes the tool relevant
+    runs_in: str       # "root", or "package": the folder holding the matched file
+    command: str
+    origin: str
+
+
+def load_tools():
+    tools = []
+    for n, line in enumerate(read_text(TOOLS).splitlines(), 1):
+        if line.startswith(("tool\t", "#")) or not line.strip():
+            continue
+        cols = line.split("\t")
+        if len(cols) != 5 or cols[3] not in ("root", "package"):
+            sys.exit(f"tools.tsv:{n}: expected tool, lens, detect, runs_in (root|package), command")
+        tools.append(Tool(cols[0], cols[1], re.compile(cols[2]), cols[3], cols[4], f"tools.tsv:{n}"))
+    return tools
+
+
+def tool_available(cwd, command):
+    """True when the command's binary is installed; for `npx --no-install X`, when X is in node_modules/.bin."""
+    words = command.split()
+    if words[:2] == ["npx", "--no-install"]:
+        return os.path.exists(os.path.join(cwd, "node_modules", ".bin", words[2]))
+    if words[0].startswith("./"):
+        return os.path.exists(os.path.join(cwd, words[0]))
+    return shutil.which(words[0]) is not None
+
+
+def relevant_tools(root, files, fired):
+    """[(tool, folder to run in, available)] per fired lens: root tools once, package tools once per package."""
+    found = []
+    for tool in load_tools():
+        if tool.lens not in fired:
+            continue
+        matches = [f for f in files if tool.detect.search(f)]
+        if tool.runs_in == "root":
+            folders = ["."] if matches else []
+        else:
+            folders = outermost({os.path.dirname(f) or "." for f in matches})
+        for folder in folders:
+            match = next((f for f in matches if (os.path.dirname(f) or ".") == folder), matches[0])
+            command = tool.command.replace("{file}", os.path.basename(match))
+            found.append((dataclasses.replace(tool, command=command), folder,
+                          tool_available(os.path.join(root, folder), command)))
+    return found
+
+
 # ---------- the repository ----------
 
 def git(root, *args):
@@ -139,10 +193,16 @@ def churn(root, since="12 months ago"):
     return collections.Counter(f for f in out.splitlines() if f and not SKIP_PATH.search(f))
 
 
+def outermost(dirs):
+    """Sorted folders with every folder nested inside another one dropped ("." contains everything)."""
+    if "." in dirs:
+        return ["."]
+    return [d for d in sorted(dirs) if not any(d.startswith(other + "/") for other in dirs)]
+
+
 def packages(files):
     """Top-level folders that carry their own manifest; nested packages fold into their parent."""
-    dirs = sorted({os.path.dirname(f) for f in files if os.path.basename(f) in MANIFESTS and os.path.dirname(f)})
-    return [d for d in dirs if not any(d.startswith(other + "/") for other in dirs)]
+    return outermost({os.path.dirname(f) for f in files if os.path.basename(f) in MANIFESTS and os.path.dirname(f)})
 
 
 def ext(path):
@@ -274,6 +334,8 @@ def plan(fired, load, per_file, pkgs, n_source, budget):
             if 1 < len(parts) <= spare + 1:
                 shards[lens], spare = parts, spare - (len(parts) - 1)
     count = len(fired) + sum(len(v) - 1 for v in shards.values())
+    if count > budget:
+        return f"parallel in waves: {count} lenses, at most {budget} subagents at once, heaviest lenses first"
     text = f"parallel: {count} subagents (budget {budget}), one per lens"
     if shards:
         text += "; shard " + "; ".join(f"{lens} into {', '.join(parts)}" for lens, parts in shards.items())
@@ -302,6 +364,13 @@ def render(ctx):
             out.append(f"- **{name}** fires: {why} — {ctx['load'][name]} candidate sites")
         else:
             out.append(f"- {name} skipped: fires {lens.fires}, and no signal matched")
+    out += ["", "## Tools", "", "Run each available one and save its output to `<out>/tools/<name>.txt`; its warnings are leads for the lens named.", ""]
+    for tool, folder, available in ctx["tools"]:
+        state = "available" if available else "not installed: note it, never install"
+        run = tool.command if folder == "." else f"cd {folder} && {tool.command}"
+        out.append(f"- **{tool.name}** → {tool.lens}: `{run}` ({state})")
+    if not ctx["tools"]:
+        out.append("- none relevant")
     out += ["", "## Hot spots (12 months)", ""]
     out += [f"- {n:4} {f}" for f, n in ctx["heat"].most_common(15)]
     out += ["", "## Candidate sites", "", "Leads only. Every probe is answered whether or not it has sites here.", ""]
@@ -332,7 +401,7 @@ def cmd_scan(a):
     pkgs = packages(files)
     print(render(dict(
         root=root, since=a.since, rows=rows, files=files, scoped=scoped, hits=hits, fired=fired,
-        reasons=reasons, sites=sites, probe_hits=probe_hits, counts=counts, heat=heat, pkgs=pkgs, load=load,
+        reasons=reasons, sites=sites, tools=relevant_tools(root, files, set(fired)), probe_hits=probe_hits, counts=counts, heat=heat, pkgs=pkgs, load=load,
         plan=plan(fired, load, per_file, pkgs, sum(ext(f) in CODE for f in scoped), a.budget))))
     return 0
 
@@ -366,6 +435,7 @@ def cmd_check(a):
         if row.kind == "seed" and row.id.partition(".")[2] not in getattr(lenses.get(row.lens), "probes", ()):
             problems.append(f"{row.origin}: seed {row.id} names no probe in lenses/{row.lens}.md")
     problems += [f"ALWAYS lens '{l}' has no lenses/{l}.md" for l in ALWAYS if l not in lenses]
+    problems += [f"{t.origin}: tool {t.name} feeds unknown lens '{t.lens}'" for t in load_tools() if t.lens not in lenses]
     n_probes = sum(len(l.probes) for l in lenses.values())
     print("\n".join(problems) or f"ok: {len(rows)} rows, {len(lenses)} lenses, {n_probes} probes")
     return 1 if problems else 0

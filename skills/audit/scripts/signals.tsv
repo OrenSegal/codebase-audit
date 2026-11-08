@@ -77,4 +77,10 @@ seed	ux.a11y-extremes	-	code	lineLimit\(1\)|maxLines\s*[=:]\s*1\b|text-overflow:
 seed	tests.classify	-	test:code	(^|[^A-Za-z_.])xit\(|xdescribe\(|\b(it|describe|test)\.skip|@Disabled|@Ignore|XCTSkip|pytest\.mark\.skip|t\.Skip\(|#\[ignore\]|\.disabled\(	disabled-tests
 seed	tests.classify	-	test:code	expect\(true\)|assert True\b|XCTAssert\(true\)|assertTrue\(true\)|#expect\(true\)	-
 seed	tests.classify	-	test:code	\bsleep\(|Thread\.sleep|Task\.sleep|setTimeout\(|Date\(\)|new Date\(\)|datetime\.now	-
+signal	ci-or-deploy	operations	path	(^|/)\.github/workflows/|\.gitlab-ci\.yml$|(^|/)\.circleci/|(^|/)Dockerfile$|(^|/)fastlane/|(^|/)(vercel|netlify)\.(json|toml)$|(^|/)fly\.toml$|\.tf$|(^|/)bitrise\.yml$|(^|/)codemagic\.yaml$|(^|/)render\.yaml$	-
+seed	operations.ci-gates	-	yml,yaml	continue-on-error:\s*true|\|\|\s*true\b|allow_failure:\s*true|--passWithNoTests|--no-verify	-
+seed	operations.secrets-handling	-	yml,yaml	echo\s+\$\{\{\s*secrets\.|set -x|ACTIONS_STEP_DEBUG	-
+seed	security.crypto	-	code	(?i)\bmd5\b|sha1\(|createHash\(['\"](md5|sha1)['\"]|Math\.random\(\)|random\.random\(|Insecure\.(MD5|SHA1)|AES/ECB|kCCOptionECBMode|==\s*(token|secret|signature|hmac)\b	-
+seed	failure.dependency-outage	-	code	new (Stripe|Twilio|OpenAI|Anthropic|Resend|Postmark)\(|createClient\(|initializeApp\(|Purchases\.configure|GoogleGenerativeAI\(	-
+seed	design.docs-drift	-	md	`(npm|pnpm|yarn|npx|make|python3?|swift|xcodebuild|flutter|go|cargo|bundle|supabase) [^`]+`	-
 special	hack-markers	-	code	\b(HACK|FIXME|XXX)\b|(?i:workaround)	hack-markers
