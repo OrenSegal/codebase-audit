@@ -99,6 +99,8 @@ claude plugin marketplace add OrenSegal/codebase-audit
 claude plugin install codebase-audit@codebase-audit
 ```
 
+The scripts need Python 3.9 or newer and git; they use only the standard library.
+
 Other hosts (Codex reads `agents/openai.yaml`; Cursor, Windsurf): copy `skills/audit/` into the host's skills directory. The fix routes name mattpocock-skills; without them, the audit does each step inline.
 
 ## Credits
