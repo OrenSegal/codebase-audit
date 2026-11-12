@@ -215,14 +215,19 @@ def routable(files):
 
 
 def changed_since(root, ref):
-    committed = git(root, "diff", "--name-only", f"{ref}...HEAD")
+    """Files under root changed since ref: committed, staged, unstaged and untracked, as paths relative to root."""
+    committed = git(root, "diff", "--name-only", "-z", "--relative", f"{ref}...HEAD")
     if committed is None:
         sys.exit(f"cannot diff against {ref}")
-    return set(committed.split()) | set((git(root, "diff", "--name-only") or "").split())
+    working = git(root, "diff", "--name-only", "-z", "--relative", "HEAD") or ""
+    untracked = git(root, "ls-files", "-z", "--others", "--exclude-standard") or ""
+    return {f for f in (committed + working + untracked).split("\0") if f}
 
 
 def churn(root, since="12 months ago"):
-    out = git(root, "log", f"--since={since}", "--no-merges", "--name-only", "--format=") or ""
+    # --relative: paths as list_files gives them when root is a subfolder; quotepath off: non-ASCII names unquoted
+    out = git(root, "-c", "core.quotepath=off", "log", f"--since={since}", "--no-merges", "--name-only",
+              "--relative", "--format=") or ""
     return collections.Counter(f for f in out.splitlines() if f and not SKIP_PATH.search(f))
 
 
@@ -400,7 +405,8 @@ def render(ctx):
             why = "; ".join(ctx["reasons"][name]) or "requested"
             out.append(f"- **{name}** fires: {why} — {ctx['load'][name]} candidate sites")
         else:
-            out.append(f"- {name} skipped: fires {lens.fires}, and no signal matched")
+            why = "not in --lens" if ctx["requested"] else f"fires {lens.fires}, and no signal matched"
+            out.append(f"- {name} skipped: {why}")
     out += ["", "## Tools", "", "Run each available one and save its output to `<out>/tools/<name>.txt`; its warnings are leads for the lens named.", ""]
     for tool, folder, available in ctx["tools"]:
         state = "available" if available else "not installed: note it, never install"
@@ -489,6 +495,10 @@ def main():
     ap.add_argument("--special", action="store_true", help="print special-case counts only")
     ap.add_argument("--check", action="store_true", help="check signals against lenses/*.md")
     a = ap.parse_args()
+    if a.budget < 1:
+        ap.error("--budget must be at least 1")
+    if not os.path.isdir(a.root):
+        ap.error(f"{a.root}: not a directory")  # exits 2, so a mistyped path cannot yield an empty scan
     return cmd_check(a) if a.check else cmd_special(a) if a.special else cmd_scan(a)
 
 
