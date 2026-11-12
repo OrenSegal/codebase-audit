@@ -1,6 +1,6 @@
 # codebase-audit
 
-An adversarial codebase audit that adapts to the project, verifies its own findings, delivers fixes as a ticketed map, and untangles the structure. One Agent Skill; any stack (iOS, Android, Flutter, React Native, web, Node, Python, Go, Rust); any host that reads Agent Skills.
+An adversarial codebase audit that adapts to the project, has each serious finding challenged by a separate refuter, delivers fixes as a ticketed map, and untangles the structure. One Agent Skill; any stack (iOS, Android, Flutter, React Native, web, Node, Python, Go, Rust); any host that reads Agent Skills.
 
 ## Usage
 
@@ -14,7 +14,7 @@ An adversarial codebase audit that adapts to the project, verifies its own findi
 
 The skill is user-invoked, so it costs no context until you call it.
 
-**In CI** (or any `claude -p` run), unanswered questions stay on `HANDOFF.md`, tickets go to the local tracker only, and no source changes without approval. Gate the job on `verify.py` as its own step:
+**In CI** (or any `claude -p` run), unanswered questions stay on `HANDOFF.md`, tickets go to the local tracker only, and no source changes without approval. Gate the job on `verify.py` as its own step. It fails when the audit left no output, a lens that fired has no findings file, a probe is unanswered, a finding points outside the repo or at a missing file, a `CONFIRMED` verdict names no reproduction file that exists, or the report omits a finding. It checks that the output is complete and well-formed, not that a finding is true:
 
 ```bash
 claude -p "/codebase-audit:audit --since origin/main" --allowedTools "Read,Grep,Glob,Write,Edit,Agent,Bash(python3 *),Bash(git *)" && python3 "$PLUGIN_DIR/skills/audit/scripts/verify.py" .audit
@@ -28,7 +28,7 @@ claude -p "/codebase-audit:audit --since origin/main" --allowedTools "Read,Grep,
 | Tools | Installed analyzers (type checkers, linters, secret and vulnerability scanners, dead-code finders) run once; their warnings become leads | output in `.audit/tools/` |
 | Recon | Boundaries, who owns each fact, critical paths, house rules (glossary, ADRs), and which conditional probes hold | every heading answered |
 | Hunt | One pass per lens, in sequence or as read-only subagents; methods: pre-mortem, inversion, assumption ledger, Chesterton's fence | `verify.py --lens <lens>` per hunter |
-| Verify | Merge duplicates; one claim-only refuter per serious finding; promote by reproduction (`CONFIRMED`) or reasoning (`PLAUSIBLE`); a coverage critic sends thinly covered critical paths back for a second look | `refuted.md` |
+| Verify | Merge duplicates; one claim-only refuter per serious finding; promote by reproduction (`CONFIRMED`) or reasoning (`PLAUSIBLE`); a coverage critic sends thinly covered critical paths back for a second look | `refuted.md`, which `verify.py` requires beside the report and checks against the findings |
 | Report | Fixes above the findings they solve, ranked by severity (set by who can trigger it) then detectability; structural fixes in deep-module terms; trend since the last audit; proposed project-local seed rows | `verify.py` on the whole output |
 | Deliver | An audit map plus one typed ticket per fix with blocking edges, on the repo's tracker (local `.scratch/` by default) | `HANDOFF.md` names the next ticket |
 | Fix | Each ticket routed to `tdd`, `UNTANGLE.md`, `grill-with-docs`, `improve-codebase-architecture`, `codebase-design`, `wayfinder`, `to-tickets` or `diagnosing-bugs`; source changes only for tickets on `HANDOFF.md`'s `approved:` line | the ticket's repro goes green |
