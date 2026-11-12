@@ -109,11 +109,11 @@ Other hosts (Codex reads `agents/openai.yaml`; Cursor, Windsurf): copy `skills/a
 
 ## Credits
 
-- `UNTANGLE.md` is adapted from [caldoai/skills `untangle-codebase`](https://github.com/caldoai/skills) (MIT, Copyright (c) 2026 Maze).
+- `UNTANGLE.md`, the structural taxonomy and comment rules in `lenses/design.md`, and the test classes in `lenses/tests.md` are adapted from [caldoai/skills `untangle-codebase`](https://github.com/caldoai/skills) (MIT, Copyright (c) 2026 Maze); see `NOTICE`.
 - Vocabulary and hand-off shapes from [mattpocock/skills](https://github.com/mattpocock/skills): codebase-design, wayfinder, to-tickets, grilling, handoff.
 - Verification follows the claim-only refuter and runtime-validation pattern of [Refute-or-Promote](https://arxiv.org/pdf/2604.19049).
 - Lens prompts draw on [awesome-falsehood](https://github.com/kdeldycke/awesome-falsehood), the fallacies of distributed computing, Hyrum's law, STRIDE, and [OWASP MASVS](https://mas.owasp.org/).
 
 ## License
 
-MIT
+MIT. Third-party text is listed in `NOTICE`.
