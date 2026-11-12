@@ -72,7 +72,7 @@ Subagents start with no skills and none of this conversation, so each brief stan
 - scenario: <concrete input, state or timing> → <wrong outcome a user or system sees>
 - severity: critical | high | medium | low
 - detectability: loud (crash, alert, test fails) | quiet (wrong answer someone may notice) | silent (nobody will notice)
-- verdict: CONFIRMED (<the test, script, query or screenshot that reproduced it>) | PLAUSIBLE (reasoned, not run)
+- verdict: CONFIRMED (<path of the test, script, query or screenshot that reproduced it, under <out>/repro/ or in the repo>) | PLAUSIBLE (reasoned, not run)
 - fix family: <the kind of change, not the patch>
 ```
 
@@ -80,13 +80,13 @@ Subagents start with no skills and none of this conversation, so each brief stan
 
 **Redact**: findings, repros, reports and tickets get shared. Write `<REDACTED>` in place of any secret, token or personal data, and point at where it lives instead of quoting it.
 
-A findings file opens with the lens's artifact. Every probe ends in at least one finding or one `clean:` line: `clean: <probe> — <evidence>`, or for a conditional probe whose condition does not hold, `clean: <probe> — n/a: <why>`. A hunter is done when its done line holds and `python3 scripts/verify.py <out> --root <path> --lens <lens>` passes.
+A findings file opens with the lens's artifact; `### ` headings are reserved for findings, so the artifact uses other levels. Every probe ends in at least one finding or one `clean:` line: `clean: <probe> — <evidence>`, or for a conditional probe whose condition does not hold, `clean: <probe> — n/a: <why>`. A hunter is done when its done line holds and `python3 scripts/verify.py <out> --root <path> --lens <lens>` passes.
 
 ## 4. Verify
 
 1. **Merge duplicates** across lenses: when two findings share a location and mechanism, keep the more severe block, add `- also: <the other ids>` to it, and delete the other block, so each problem appears once.
 2. **Refute**: every critical or high finding gets a fresh refuter; the rest are batched by lens. A refuter gets the finding block only, never the hunter's reasoning. For a `PLAUSIBLE` finding it tries to kill the claim: a guard upstream, a constraint in the DB, an unreachable path, a fence with a reason. For a `CONFIRMED` finding it checks the repro: does it go red for the stated reason, through code a real user or attacker reaches? When the host offers a different model, refuters use it, since shared biases make same-model agreement weak evidence.
-3. **Promote by evidence**: survived and reproduced → `CONFIRMED`; survived on reasoning → `PLAUSIBLE`; killed → `<out>/refuted.md` with the reason.
+3. **Promote by evidence**: survived and reproduced → `CONFIRMED`; survived on reasoning → `PLAUSIBLE`; killed → `<out>/refuted.md` with the id and the reason, and its block removed from the findings file. When nothing was killed, `refuted.md` says `none`.
 4. **Coverage critic**: one fresh subagent gets `RECON.md`'s critical paths and every lens's `clean:` lines, and names each critical path whose evidence is thin (a sentence where a trace or a test was needed) or that no lens reached. Each one goes back to the matching lens for a second look before the report.
 
 A repro is a **tight** feedback loop that goes **red** on this finding and no other: a failing test at the nearest seam, a script, a query. Build one wherever it costs under ten minutes, in `<out>/repro/`, against local, branch, sandbox or test-mode systems only. A finding killed by a reason that will hold next quarter (an accepted risk, a deliberate trade-off) belongs in an ADR, offered at delivery, so later audits read it in recon.
