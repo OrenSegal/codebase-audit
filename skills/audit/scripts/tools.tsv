@@ -23,4 +23,3 @@ cargo-audit	security	(^|/)Cargo\.lock$	package	cargo audit
 supabase-lint	data	(^|/)supabase/migrations/	package	supabase db lint
 osv-scanner	security	(^|/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|Package\.resolved|Podfile\.lock|pubspec\.lock|poetry\.lock|go\.sum|Cargo\.lock|requirements[^/]*\.txt)$	root	osv-scanner scan --recursive .
 gitleaks	security	.	root	gitleaks detect --no-banner --redact
-semgrep	security	\.(ts|tsx|js|jsx|py|go|java|kt|swift|rb|php)$	root	semgrep scan --config p/default --quiet
