@@ -85,6 +85,10 @@ Then run the checks in `AGENTS.md`.
 
 Everything goes to `.audit/` in the audited repo, ignored by its own `.gitignore`: `SCAN.md`, `RECON.md`, `RUN.md`, `HANDOFF.md`, `tools/`, `findings/`, `refuted.md`, `repro/`, `REPORT.md`, `untangle-log.md`, and `history/` with earlier runs. The map and tickets go to the issue tracker (`.scratch/audit-<date>/` when local).
 
+## Evidence
+
+None is published yet. `evals/` holds five cases on small seeded fixtures (see `AGENTS.md`), but no results are committed, each case runs once, and there is no run without the skill to compare against. There is no measurement of recall, precision or false positives on a real codebase.
+
 ## Install
 
 Claude Code:

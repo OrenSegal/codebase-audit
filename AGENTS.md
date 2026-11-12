@@ -22,6 +22,10 @@ claude plugin eval . --scaffold --runs 1 --ablation none -j 3 --allow-tools Bash
 | `work-the-map` | resume from `HANDOFF.md`, one approved ticket fixed test-first, map and hand-off updated |
 | `resume-unapproved` | resume with no approval: asks first, changes no source |
 
+What the suite does not show: no results are committed (`evals/results/` is git-ignored), each case runs once, the fixtures are a few small files written for this skill, and `--ablation none` runs no arm without the skill, so a pass says the skill completed the case, not that it beat an unaided prompt. Add `--runs` and an ablation arm before quoting a number.
+
+`tests/test_evals.py` checks, without calling a model, that every scaffold builds its workspace from a clean clone.
+
 To run a subset, filter by tag (`--tag untangle handoff`); `--case` takes one glob and its last occurrence wins.
 
 Each fact has one home; the table in `README.md` says where. Edit it there and point to it from everywhere else.
