@@ -118,6 +118,73 @@ class DiffModeTest(unittest.TestCase):
         finally:
             shutil.rmtree(repo)
 
+    def repo(self):
+        """A repo with one commit, then a second that adds a file in src/billing and edits one with spaces in its path."""
+        repo = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, repo)
+        git = lambda *a: subprocess.run(["git", "-C", repo, "-c", "user.email=t@t", "-c", "user.name=t", *a],
+                                        check=True, capture_output=True)
+        os.makedirs(os.path.join(repo, "src", "billing"))
+        os.makedirs(os.path.join(repo, "src", "other dir"))
+        git("init", "-q")
+        write(os.path.join(repo, "src", "billing", "old.ts"), "try { a() } catch {}\n")
+        write(os.path.join(repo, "src", "other dir", "sp ace.ts"), "export const x = 1\n")
+        git("add", "-A"); git("commit", "-qm", "one")
+        write(os.path.join(repo, "src", "billing", "new.ts"), "try { b() } catch {}\n")
+        write(os.path.join(repo, "src", "other dir", "sp ace.ts"), "try { c() } catch {}\n")
+        git("add", "-A"); git("commit", "-qm", "two")
+        return repo, git
+
+    def scan(self, *args):
+        return subprocess.run([sys.executable, SCAN, *args], capture_output=True, text=True)
+
+    def test_since_on_a_subfolder_finds_its_changed_files(self):
+        repo, _ = self.repo()
+        out = self.scan(os.path.join(repo, "src", "billing"), "--since", "HEAD~1").stdout
+        self.assertIn("new.ts:1", out)
+        self.assertNotIn("old.ts:1", out)
+
+    def test_since_keeps_changed_paths_with_spaces(self):
+        repo, _ = self.repo()
+        self.assertIn("src/other dir/sp ace.ts:1", self.scan(repo, "--since", "HEAD~1").stdout)
+
+    def test_since_includes_staged_and_untracked_files(self):
+        repo, git = self.repo()
+        write(os.path.join(repo, "staged.ts"), "try { d() } catch {}\n")
+        git("add", "staged.ts")
+        write(os.path.join(repo, "untracked.ts"), "try { e() } catch {}\n")
+        out = self.scan(repo, "--since", "HEAD").stdout
+        self.assertIn("staged.ts:1", out)
+        self.assertIn("untracked.ts:1", out)
+
+    def test_hot_spots_on_a_subfolder_are_its_own_files(self):
+        repo, _ = self.repo()
+        hot = self.scan(os.path.join(repo, "src", "billing")).stdout.split("## Hot spots")[1].split("## Candidate")[0]
+        self.assertIn("new.ts", hot)
+        self.assertNotIn("other dir", hot)
+        self.assertNotIn("src/billing", hot)
+
+
+class ArgumentTest(unittest.TestCase):
+    def scan(self, *args):
+        return subprocess.run([sys.executable, SCAN, *args], capture_output=True, text=True)
+
+    def test_missing_root_exits_2(self):
+        r = self.scan(os.path.join(tempfile.gettempdir(), "no-such-root-for-scan"))
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("not a directory", r.stderr)
+        self.assertEqual(r.stdout, "")
+
+    def test_budget_below_one_is_refused(self):
+        r = self.scan(".", "--budget", "0")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("--budget must be at least 1", r.stderr)
+
+    def test_lens_filter_says_why_an_always_lens_is_skipped(self):
+        out = self.scan(tempfile.mkdtemp(), "--lens", "money").stdout
+        self.assertIn("- design skipped: not in --lens", out)
+        self.assertNotIn("fires always, and no signal matched", out)
+
 
 if __name__ == "__main__":
     unittest.main()

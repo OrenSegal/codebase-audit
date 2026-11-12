@@ -36,13 +36,19 @@ MAX_SHARDS_PER_LENS = 4
 MAX_BYTES = 1_000_000        # larger files are generated or vendored; skip them
 
 CODE = {"swift", "m", "mm", "kt", "kts", "java", "ts", "tsx", "js", "jsx", "mjs", "cjs", "py", "go",
-        "rs", "dart", "rb", "php", "cs", "vue", "svelte", "astro", "scala", "ex", "exs"}
+        "rs", "dart", "rb", "php", "cs", "vue", "svelte", "astro", "scala", "ex", "exs",
+        "html", "htm", "sh", "bash", "sql"}
 MANIFESTS = {"package.json", "Package.swift", "Podfile", "build.gradle", "build.gradle.kts", "pubspec.yaml",
              "pyproject.toml", "requirements.txt", "go.mod", "Cargo.toml", "Gemfile", "composer.json", "pom.xml"}
 TEST_PATH = re.compile(r"(^|/)(tests?|__tests__|spec|specs|[A-Za-z]*Tests|UITests)/|[._-](test|spec)\.\w+$"
                        r"|Tests?\.swift$|_test\.(go|py|dart)$|(^|/)test_\w+\.py$")
 SKIP_PATH = re.compile(r"(^|/)(node_modules|vendor|Pods|build|dist|\.build|DerivedData|\.dart_tool|\.next"
                        r"|target|\.venv|venv|__pycache__|\.audit|\.git)/")
+# Read for analyzers (tools.tsv detects on lockfiles) but never for stacks, signals or seeds: a lockfile is
+# generated, and a fixture is another project's code, so neither says what this project is.
+LOCKFILES = {"package-lock.json", "pnpm-lock.yaml", "yarn.lock", "Cargo.lock", "poetry.lock", "uv.lock", "Podfile.lock",
+             "pubspec.lock", "Package.resolved", "go.sum", "composer.lock", "Gemfile.lock"}
+FIXTURE_PATH = re.compile(r"(^|/)(fixtures?|__fixtures__|__snapshots__|testdata|test-data)/")
 PROBE_LINE = re.compile(r"^- \*\*([a-z0-9-]+)\*\*( \(when [^)]+\))?:", re.MULTILINE)
 FIRES_LINE = re.compile(r"^Fires: (always|when .+)$", re.MULTILINE)
 
@@ -139,10 +145,18 @@ def load_tools():
 
 
 def tool_available(cwd, command):
-    """True when the command's binary is installed; for `npx --no-install X`, when X is in node_modules/.bin."""
+    """True when the command's binary is installed; for `npx --no-install X`, when X is in node_modules/.bin
+    of the folder or of a parent up to the repo top, where workspaces hoist it."""
     words = command.split()
     if words[:2] == ["npx", "--no-install"]:
-        return os.path.exists(os.path.join(cwd, "node_modules", ".bin", words[2]))
+        top = (git(cwd, "rev-parse", "--show-toplevel") or "").strip() or cwd
+        folder = os.path.realpath(cwd)
+        while True:
+            if os.path.exists(os.path.join(folder, "node_modules", ".bin", words[2])):
+                return True
+            if folder == os.path.realpath(top) or folder == os.path.dirname(folder):
+                return False
+            folder = os.path.dirname(folder)
     if words[0].startswith("./"):
         return os.path.exists(os.path.join(cwd, words[0]))
     return shutil.which(words[0]) is not None
@@ -176,23 +190,47 @@ def git(root, *args):
         return None
 
 
-def list_files(root):
+def every_file(root):
     out = git(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard")
     if out is None:
         out = "\0".join(os.path.relpath(os.path.join(d, n), root) for d, _, names in os.walk(root) for n in names)
-    return [f for f in out.split("\0")
-            if f and not SKIP_PATH.search(f) and os.path.isfile(os.path.join(root, f))]
+    return [f for f in out.split("\0") if f]
+
+
+def list_files(root):
+    return [f for f in every_file(root) if not SKIP_PATH.search(f) and os.path.isfile(os.path.join(root, f))]
+
+
+def skipped(root):
+    """{what: file count} for files the routing never reads: build and vendor folders, fixtures, lockfiles."""
+    counts = collections.Counter()
+    for f in every_file(root):
+        m = SKIP_PATH.search(f) or FIXTURE_PATH.search(f)
+        if m and not re.search(r"(^|/)(\.git|\.audit|__pycache__)/", f):
+            counts[f[:m.end()]] += 1
+        elif os.path.basename(f) in LOCKFILES:
+            counts[f] += 1
+    return counts
+
+
+def routable(files):
+    return [f for f in files if os.path.basename(f) not in LOCKFILES and not FIXTURE_PATH.search(f)]
 
 
 def changed_since(root, ref):
-    committed = git(root, "diff", "--name-only", f"{ref}...HEAD")
+    """Files under root changed since ref: committed, staged, unstaged and untracked, as paths relative to root."""
+    committed = git(root, "diff", "--name-only", "-z", "--relative", f"{ref}...HEAD")
     if committed is None:
         sys.exit(f"cannot diff against {ref}")
-    return set(committed.split()) | set((git(root, "diff", "--name-only") or "").split())
+    working = git(root, "diff", "--name-only", "-z", "--relative", "HEAD") or ""
+    untracked = git(root, "ls-files", "-z", "--others", "--exclude-standard") or ""
+    return {f for f in (committed + working + untracked).split("\0") if f}
 
 
 def churn(root, since="12 months ago"):
-    out = git(root, "log", f"--since={since}", "--no-merges", "--name-only", "--format=") or ""
+    # --relative: paths as list_files gives them when root is a subfolder; quotepath off: non-ASCII names unquoted
+    out = git(root, "-c", "core.quotepath=off", "log", f"--since={since}", "--no-merges", "--name-only",
+              "--relative", "--format=") or ""
     return collections.Counter(f for f in out.splitlines() if f and not SKIP_PATH.search(f))
 
 
@@ -250,7 +288,9 @@ def detect(root, rows, files):
         if row.scope == "path":
             evidence = next((f for f in files if row.rx.search(f)), None)
         else:
-            pool = manifests if row.scope == "dep" else [f for f in files if in_scope(row.scope, f)]
+            # test code quotes other stacks (a mocked SDK, an inline sample), so it does not say what the project is
+            pool = manifests if row.scope == "dep" else [f for f in files if in_scope(row.scope, f)
+                                                         and (row.scope.startswith("test:") or not TEST_PATH.search(f))]
             evidence = next((f for f in pool if row.rx.search(read(root, f))), None)
         if evidence:
             hits[row.id] = evidence
@@ -356,6 +396,8 @@ def render(ctx):
     out = ["# Scan", "",
            f"- root: `{ctx['root']}`{since}",
            f"- files: {len(ctx['files'])} tracked, {len(source)} source files in scope",
+           "- not read for routing: " + (", ".join(f"{path} ({n})" for path, n in ctx["skipped"].most_common(12))
+                                         + (" and more" if len(ctx["skipped"]) > 12 else "") or "nothing"),
            f"- languages: {', '.join(f'{e} {n}' for e, n in langs) or 'none'}",
            f"- stacks: {', '.join(stacks) or 'none detected'}",
            f"- packages: {', '.join(ctx['pkgs']) or 'single package'}",
@@ -366,7 +408,8 @@ def render(ctx):
             why = "; ".join(ctx["reasons"][name]) or "requested"
             out.append(f"- **{name}** fires: {why} — {ctx['load'][name]} candidate sites")
         else:
-            out.append(f"- {name} skipped: fires {lens.fires}, and no signal matched")
+            why = "not in --lens" if ctx["requested"] else f"fires {lens.fires}, and no signal matched"
+            out.append(f"- {name} skipped: {why}")
     out += ["", "## Tools", "", "Run each available one and save its output to `<out>/tools/<name>.txt`; its warnings are leads for the lens named.", ""]
     for tool, folder, available in ctx["tools"]:
         state = "available" if available else "not installed: note it, never install"
@@ -393,7 +436,8 @@ def render(ctx):
 def cmd_scan(a):
     root = os.path.abspath(a.root)
     rows = load_rows(root)
-    files = list_files(root)
+    listed = list_files(root)
+    files = routable(listed)
     heat = churn(root)
     scoped = files if not a.since else [f for f in files if f in changed_since(root, a.since)]
     scoped = sorted(scoped, key=lambda f: (bool(TEST_PATH.search(f)), -heat[f], f))  # hot source files first
@@ -403,8 +447,9 @@ def cmd_scan(a):
     load = lens_load(fired, probe_hits)
     pkgs = packages(files)
     print(render(dict(
-        root=root, since=a.since, rows=rows, files=files, scoped=scoped, hits=hits, fired=fired,
-        reasons=reasons, sites=sites, tools=relevant_tools(root, files, set(fired)), probe_hits=probe_hits, counts=counts, heat=heat, pkgs=pkgs, load=load,
+        root=root, since=a.since, requested=bool(a.lens), rows=rows, files=files, scoped=scoped, hits=hits, fired=fired,
+        reasons=reasons, sites=sites, tools=relevant_tools(root, listed, set(fired)), skipped=skipped(root),
+        probe_hits=probe_hits, counts=counts, heat=heat, pkgs=pkgs, load=load,
         plan=plan(fired, load, per_file, pkgs, sum(ext(f) in CODE for f in scoped), a.budget))))
     return 0
 
@@ -412,7 +457,7 @@ def cmd_scan(a):
 def cmd_special(a):
     root = os.path.abspath(a.root)
     rows = load_rows(root)
-    _, _, counts, _ = seed(root, rows, list_files(root), set(), 0)
+    _, _, counts, _ = seed(root, rows, routable(list_files(root)), set(), 0)
     for tag in sorted({r.tag for r in rows if r.tag}):
         print(f"{tag:20} {counts[tag]}")
     return 0
@@ -454,6 +499,10 @@ def main():
     ap.add_argument("--special", action="store_true", help="print special-case counts only")
     ap.add_argument("--check", action="store_true", help="check signals against lenses/*.md")
     a = ap.parse_args()
+    if a.budget < 1:
+        ap.error("--budget must be at least 1")
+    if not os.path.isdir(a.root):
+        ap.error(f"{a.root}: not a directory")  # exits 2, so a mistyped path cannot yield an empty scan
     return cmd_check(a) if a.check else cmd_special(a) if a.special else cmd_scan(a)
 
 

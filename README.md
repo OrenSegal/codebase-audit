@@ -56,6 +56,8 @@ Each lens file opens with a `Fires:` line; probes marked *(when …)* are condit
 | ux | a user interface | cardinality, day-2-day-30, copy-lie, dead-ends, no-undo, a11y-extremes | interrupted-user, locale-adversary |
 | operations | CI, deployment or infrastructure config | ci-gates, secrets-handling, dependency-updates | backup-restore, alerting, runbooks, cost-runaway |
 
+Routing is pattern matching over file paths, manifests and source (`signals.tsv`), so it is as good as its rows: a stack or SDK with no row gets the seven always-on lenses and no candidate sites until a row is added, and recon can override a lens the scan fired or skipped. Lockfiles, fixture folders and build or vendor folders are not read for routing; the scan's `not read for routing` line lists them.
+
 The lens files are the source of truth for this table; `scan.py --check` fails if a `Fires:` line disagrees with the routing.
 
 ## Single source of truth
