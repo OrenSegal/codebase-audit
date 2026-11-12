@@ -13,14 +13,16 @@ stack	python	-	path	(^|/)(pyproject\.toml|requirements[^/]*\.txt|setup\.py)$|\.p
 stack	go	-	path	(^|/)go\.mod$	-
 stack	rust	-	path	(^|/)Cargo\.toml$	-
 stack	ruby	-	path	(^|/)Gemfile$	-
-signal	ui	ux	code	import SwiftUI|import UIKit|androidx\.compose|package:flutter/|from ['\"]react['\"]|<template>|<!DOCTYPE html	-
+signal	ui	ux	code	import SwiftUI|import UIKit|androidx\.compose|package:flutter/|from ['\"]react['\"]|<template>|(?i:<!doctype html)	-
 signal	database	data,evolution	path	(^|/)migrations?/|\.sql$|(^|/)schema\.prisma$|(^|/)supabase/|(^|/)firestore\.rules$|(^|/)firebase\.json$	-
-signal	database-dep	data,evolution	dep	prisma|sqlalchemy|django|typeorm|drizzle|mongoose|supabase|firebase|psycopg|\"pg\"|GRDB|sqflite|drift|androidx\.room	-
-signal	server-api	data	code	FastAPI\(|@app\.(get|post|route)|express\(\)|router\.(get|post)|Deno\.serve|export (async )?function (GET|POST)|@(Get|Post)Mapping	-
+signal	database-dep	data,evolution	dep	(?<![A-Za-z])(prisma|sqlalchemy|django|typeorm|drizzle|mongoose|supabase|firebase|psycopg|\"pg\"|GRDB|sqflite|drift|androidx\.room|@vercel/blob|@aws-sdk/client-s3|@google-cloud/storage|@azure/storage-blob)(?![A-Za-z])	-
+signal	server-api	data	code	FastAPI\(|@app\.(get|post|route)|express\(\)|router\.(get|post)|Deno\.serve|export (async )?function (GET|POST)|@(Get|Post)Mapping|BaseHTTPRequestHandler|http\.server|http\.(HandleFunc|ListenAndServe)|createServer\(|module\.exports\s*=\s*(async\s+)?(function\s*)?\(\s*req\s*,\s*res|export default (async )?function handler	-
+signal	api-dir	data	path	^api/.+\.(js|mjs|ts|py|go|rb)$	-
+signal	database-code	data,evolution	code	\"database/sql\"|\bsqlx::|\bdiesel::|\brusqlite::|\bsqlite3\.connect\(	-
 signal	local-store	evolution	code	NSPersistentContainer|ModelContainer|@Model\b|RealmSwift|@Database\(|sqflite|Hive\.|AsyncStorage|indexedDB	-
-signal	ai	ai	dep	openai|anthropic|generative-?ai|langchain|llama|ollama|transformers|\"torch\"|tensorflow|onnxruntime|mlkit|tesseract	-
-signal	ai-code	ai	code	VNRecognizeText|VisionKit|import CoreML|MLModel\(|FoundationModels|LanguageModelSession|TextRecognizer|messages\.create\(|chat\.completions|generateContent\(|[\"']claude[\"'],\s*[\"']-p	-
-signal	money	money	dep	stripe|revenuecat|purchases_flutter|in_app_purchase|billingclient|com\.android\.billingclient|react-native-iap|paddle|lemonsqueezy	-
+signal	ai	ai	dep	(?<![A-Za-z])(openai|anthropic|generative-?ai|langchain|llama|ollama|transformers|torch|pytorch|tensorflow|onnxruntime|mlkit|tesseract|llamaindex|@ai-sdk/[a-z-]+|@google/genai|paddleocr|paddlepaddle|easyocr)(?![A-Za-z])|\"ai\"\s*:	-
+signal	ai-code	ai	code	VNRecognizeText|VisionKit|import CoreML|MLModel\(|FoundationModels|LanguageModelSession|TextRecognizer|messages\.create\(|chat\.completions|generateContent\(|[\"']claude[\"'],\s*[\"']-p|\b(generate|stream)(Text|Object)\(	-
+signal	money	money	dep	(?<![A-Za-z])(stripe|revenuecat|purchases_flutter|in_app_purchase|billingclient|com\.android\.billingclient|react-native-iap|paddle|lemonsqueezy)(?![A-Za-z])	-
 signal	money-code	money	code	import StoreKit|Product\.products|Transaction\.updates|BillingClient|Purchases\.shared|stripe\.(checkout|subscriptions|paymentIntents)	-
 seed	types.parse-at-edge	-	code	\[String: ?Any\]|Map<String, ?dynamic>|JSON\.parse\(|json\.loads\(|Dict\[str, ?Any\]|as! |try! |\bas any\b|: any\b|@ts-ignore|# type: ignore	type-escapes
 seed	types.primitive-obsession	-	code	\w+\s*:\s*(String|string|str|Int|int|UUID|number|Double)\s*,\s*\w+\s*:\s*\1\b	-
@@ -35,7 +37,7 @@ seed	state.truth-owner	-	code	UserDefaults|@AppStorage|localStorage\.|SharedPref
 seed	state.lifetime	-	code	\bTask \{|Task\.detached|useEffect\(|GlobalScope|StreamSubscription|setInterval\(|addObserver\(|\.listen\(|\.subscribe\(|Timer\.scheduledTimer	-
 seed	failure.await-race	-	code	^\s*(public |private |internal )?actor \w+|FOR UPDATE|\.transaction\(|BEGIN\b	-
 seed	failure.pull-the-plug	-	code	\.write\(to:|writeFileSync|fs\.writeFile|open\([^)]*['\"]w|FileManager\.default\.(createFile|moveItem)|\.save\(\)	-
-seed	failure.silent-catch	-	code	try\?|catch\s*(\([^)]*\))?\s*\{\s*\}|except[^:\n]*:\s*pass|\.catch\(\(\)\s*=>\s*(\{\s*\}|null|undefined)\)|runCatching|_ = err\b|\?\?\s*(\[\]|\"\"|0)\b	swallowed-errors
+seed	failure.silent-catch	-	code	try\?|catch\s*(\([^)]*\))?\s*\{\s*\}|except[^:\n]*:\s*pass|\.catch\(\(\)\s*=>\s*(\{\s*\}|null|undefined)\)|runCatching|_ = err\b|\?\?\s*(\[\]|\"\"|0)\b|,\s*_\s*:?=\s|\.unwrap\(\)|\blet _ =	swallowed-errors
 seed	failure.no-screen	-	code	isLoading\s*=\s*true|setLoading\(true\)|setIsLoading\(true\)|loading\s*=\s*true|ProgressView\(\)|CircularProgressIndicator	-
 seed	failure.logs-only-debug	-	code	(print|console\.log|NSLog|Log\.[dew]|logger\.\w+|os_log)\(.*(token|password|email|secret|authorization)	-
 seed	failure.timeouts-retries	-	code	\bsleep\(|Thread\.sleep|setTimeout\(|Task\.sleep|asyncio\.sleep|time\.Sleep|Future\.delayed|asyncAfter|[Rr]etry\w*\(|max_?[Rr]etries	sleeps-retries
@@ -44,7 +46,7 @@ seed	data.user-b	-	code,sql,rules	(?i)row level security|using \(true\)|security
 seed	data.migration-on-real-data	-	sql	(?i)add constraint|set not null|create (unique )?index (?!concurrently)|alter column .* type	-
 seed	data.delete-account	-	code,sql	(?i)delete_?account|deleteUser|delete_user|on delete (cascade|set null)|auth\.admin\.deleteUser	-
 seed	security.secrets	-	code,json,yaml,yml,plist,xml	(?i)(api[_-]?key|secret|token|password)\s*[:=]\s*['\"][A-Za-z0-9_\-]{16,}['\"]|sk_live_[0-9a-zA-Z]{10,}|AKIA[0-9A-Z]{16}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY	-
-seed	security.injection	-	code	execute\(f['\"]|execute\([^)]*\+|\.raw\(|\$queryRawUnsafe|innerHTML\s*=|dangerouslySetInnerHTML|\beval\(|shell=True|Runtime\.getRuntime\(\)\.exec|child_process|NSPredicate\(format: ?\"[^\"]*\\\(	-
+seed	security.injection	-	code	execute\(f['\"]|execute\([^)]*\+|\.raw\(|\$queryRawUnsafe|innerHTML\s*=|dangerouslySetInnerHTML|\beval\(|shell=True|Runtime\.getRuntime\(\)\.exec|child_process|NSPredicate\(format: ?\"[^\"]*\\\(|exec\.Command\(|\.(Query|Exec|QueryRow)\([^)\n]*\"\s*\+	-
 seed	security.local-storage	-	code	(?i)(UserDefaults|localStorage\.setItem|SharedPreferences|AsyncStorage\.setItem)[^\n]*(token|password|jwt|secret|session)	-
 seed	security.transport	-	code,plist,xml	http://(?!localhost|127\.0\.0\.1|schemas|www\.w3\.org)|NSAllowsArbitraryLoads|usesCleartextTraffic|verify\s*=\s*False|rejectUnauthorized:\s*false|InsecureSkipVerify	-
 seed	security.entry-points	-	code,xml,plist	onOpenURL|open url:|CFBundleURLSchemes|intent-filter|WKWebView|WebView\(|addJavascriptInterface|javaScriptEnabled|postMessage\(|multipart/form-data	-
