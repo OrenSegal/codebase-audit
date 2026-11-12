@@ -10,7 +10,7 @@
     {
       "name": "codebase-audit",
       "source": "./",
-      "description": "Stack-aware adversarial codebase audit with verified, root-cause-clustered findings, plus a one-pass untangle refactor.",
+      "description": "Adversarial codebase audit that routes lenses by detected stack, has serious findings challenged by a refuter and clusters them by root cause, plus an untangle refactor.",
       "version": "3.0.0",
       "license": "MIT"
     }

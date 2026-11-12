@@ -1,6 +1,6 @@
 # codebase-audit
 
-An adversarial codebase audit that adapts to the project, verifies its own findings, delivers fixes as a ticketed map, and untangles the structure. One Agent Skill; any stack (iOS, Android, Flutter, React Native, web, Node, Python, Go, Rust); any host that reads Agent Skills.
+An adversarial codebase audit that adapts to the project, has each serious finding challenged by a separate refuter, delivers fixes as a ticketed map, and untangles the structure. One Agent Skill, for any host that reads Agent Skills. The scan has detection rows for iOS, Android, Flutter, React Native, web, Node, Python, Go, Rust and Ruby; any other stack gets the seven always-on lenses. It is a set of instructions to a model plus two checking scripts; how many real defects it finds or misses has not been measured.
 
 ## Usage
 
