@@ -1,3 +1,5 @@
+<!-- Parts adapted from caldoai/skills untangle-codebase (MIT, Copyright (c) 2026 Maze); see NOTICE. -->
+
 # Design and structure
 
 Fires: always
