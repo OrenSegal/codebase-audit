@@ -77,6 +77,10 @@ class RoutingTest(unittest.TestCase):
         self.assertIn("- ux skipped", out)
         self.assertIn("- not read for routing: tests/fixtures/ (2)", out)
 
+    def test_test_code_does_not_route(self):
+        out = self.scan({"tool.py": "print('x')\n", "tests/test_tool.py": "SAMPLE = 'import SwiftUI'\nimport openai\n"})
+        self.assertIn("- ux skipped", out)
+
     def test_lockfile_is_not_seeded_but_still_selects_analyzers(self):
         lock = json.dumps({"packages": {f"node_modules/p{i}": {"dependencies": {"q": "^1.0.0"}} for i in range(50)}}, indent=1)
         out = self.scan({"package.json": json.dumps({"dependencies": {"left-pad": "^1.3.0"}}), "package-lock.json": lock})

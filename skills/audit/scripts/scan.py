@@ -280,7 +280,9 @@ def detect(root, rows, files):
         if row.scope == "path":
             evidence = next((f for f in files if row.rx.search(f)), None)
         else:
-            pool = manifests if row.scope == "dep" else [f for f in files if in_scope(row.scope, f)]
+            # test code quotes other stacks (a mocked SDK, an inline sample), so it does not say what the project is
+            pool = manifests if row.scope == "dep" else [f for f in files if in_scope(row.scope, f)
+                                                         and (row.scope.startswith("test:") or not TEST_PATH.search(f))]
             evidence = next((f for f in pool if row.rx.search(read(root, f))), None)
         if evidence:
             hits[row.id] = evidence
