@@ -447,7 +447,7 @@ def cmd_scan(a):
     load = lens_load(fired, probe_hits)
     pkgs = packages(files)
     print(render(dict(
-        root=root, since=a.since, rows=rows, files=files, scoped=scoped, hits=hits, fired=fired,
+        root=root, since=a.since, requested=bool(a.lens), rows=rows, files=files, scoped=scoped, hits=hits, fired=fired,
         reasons=reasons, sites=sites, tools=relevant_tools(root, listed, set(fired)), skipped=skipped(root), probe_hits=probe_hits, counts=counts, heat=heat, pkgs=pkgs, load=load,
         plan=plan(fired, load, per_file, pkgs, sum(ext(f) in CODE for f in scoped), a.budget))))
     return 0
