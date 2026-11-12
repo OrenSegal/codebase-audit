@@ -10,7 +10,10 @@ Every pattern lives in signals.tsv beside this file, every analyzer in tools.tsv
 own signal rows (same six columns) in docs/agents/audit-signals.tsv. Sites and tool warnings are
 leads for hunters, never findings.
 shortcut: invoked as python3; on Windows run `py scan.py` until someone needs a launcher.
+Needs Python 3.9 or newer, standard library only.
 """
+from __future__ import annotations  # `str | None` in a dataclass field, on Python 3.9
+
 import argparse
 import collections
 import concurrent.futures
