@@ -8,7 +8,8 @@ since=${1:-12 months ago}
 min=${2:-3}
 path=${3:-.}
 
-git log --since="$since" --no-merges --name-only --format='tformat:@@' -- "$path" |
+# quotepath off: git prints a non-ASCII name as "api/caf\303\251.ts", quotes included, which reads as another folder
+git -c core.quotepath=off log --since="$since" --no-merges --name-only --format='tformat:@@' -- "$path" |
 awk -v min="$min" -v extra="${EXCLUDE:-^$}" '
 function dir(p) { return (p ~ /\//) ? substr(p, 1, match(p, /\/[^\/]*$/) - 1) : "." }
 function flush(   i, j, a, b, t) {
