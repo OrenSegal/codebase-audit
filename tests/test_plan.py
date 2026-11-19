@@ -193,6 +193,19 @@ class ArgumentTest(unittest.TestCase):
         self.assertEqual(r.returncode, 2)
         self.assertIn("--budget must be at least 1", r.stderr)
 
+    def test_since_that_looks_like_an_option_is_refused_and_writes_nothing(self):
+        repo = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, repo)
+        git = lambda *a: subprocess.run(["git", "-C", repo, "-c", "user.email=t@t", "-c", "user.name=t", *a],
+                                        check=True, capture_output=True)
+        git("init", "-q")
+        write(os.path.join(repo, "a.ts"), "export const a = 1\n")
+        git("add", "-A"); git("commit", "-qm", "one")
+        r = self.scan(repo, "--since=--output=written-by-git")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("--since takes a git ref", r.stderr)
+        self.assertEqual(sorted(os.listdir(repo)), [".git", "a.ts"])
+
     def test_lens_filter_says_why_an_always_lens_is_skipped(self):
         out = self.scan(tempfile.mkdtemp(), "--lens", "money").stdout
         self.assertIn("- design skipped: not in --lens", out)

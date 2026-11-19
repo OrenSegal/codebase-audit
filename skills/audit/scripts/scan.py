@@ -535,6 +535,8 @@ def main():
     a = ap.parse_args()
     if a.budget < 1:
         ap.error("--budget must be at least 1")
+    if a.since and a.since.startswith("-"):
+        ap.error("--since takes a git ref, not an option")  # git would read `--output=x` as its own flag and write x
     if not os.path.isdir(a.root):
         ap.error(f"{a.root}: not a directory")  # exits 2, so a mistyped path cannot yield an empty scan
     return cmd_check(a) if a.check else cmd_special(a) if a.special else cmd_scan(a)
