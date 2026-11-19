@@ -439,7 +439,8 @@ def cmd_scan(a):
     listed = list_files(root)
     files = routable(listed)
     heat = churn(root)
-    scoped = files if not a.since else [f for f in files if f in changed_since(root, a.since)]
+    changed = changed_since(root, a.since) if a.since else None
+    scoped = files if changed is None else [f for f in files if f in changed]
     scoped = sorted(scoped, key=lambda f: (bool(TEST_PATH.search(f)), -heat[f], f))  # hot source files first
     hits = detect(root, rows, files)
     fired, reasons = route(rows, hits, [l.strip() for l in a.lens.split(",")] if a.lens else None)
