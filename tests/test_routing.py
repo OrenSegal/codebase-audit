@@ -65,6 +65,10 @@ class RoutingTest(unittest.TestCase):
         self.assertIn("`security.injection` (2 hits)", out)
         self.assertIn("`failure.silent-catch` (1 hits)", out)
 
+    def test_site_points_at_the_matching_line_past_blank_lines(self):
+        out = self.scan({"status.ts": "switch (x) {\n  case 1:\n    break;\n\n\n  default:\n    y();\n}\n"})
+        self.assertIn("status.ts:6: default:", out)
+
     def test_shell_scripts_count_as_source(self):
         self.assertIn("languages: sh 1", self.scan({"hooks/guard.sh": "#!/bin/sh\nsleep 1\n"}))
 

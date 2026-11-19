@@ -329,8 +329,10 @@ def _seed_file(job):
             if wanted:
                 hits[row.id] += 1
                 if hits[row.id] <= max_sites:
-                    line = text.count("\n", 0, m.start()) + 1
-                    snippet = text[m.start():m.start() + 80].splitlines()[0].strip()
+                    # `^\s*` in a pattern also swallows the blank lines above the match, so start at its first ink
+                    start = m.start() + len(m.group()) - len(m.group().lstrip())
+                    line = text.count("\n", 0, start) + 1
+                    snippet = (text[start:start + 80].splitlines() or [""])[0].strip()
                     sites.append((row.id, f"{path}:{line}: {snippet}"))
     return sites, hits, counts
 
