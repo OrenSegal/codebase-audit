@@ -293,14 +293,14 @@ _texts = {}
 
 
 def read(root, path):
-    if path not in _texts:
-        full = os.path.join(root, path)
+    full = os.path.join(root, path)  # the key: the same relative path under another root is another file
+    if full not in _texts:
         try:
             too_big = os.path.getsize(full) > MAX_BYTES
-            _texts[path] = "" if too_big else read_text(full)
+            _texts[full] = "" if too_big else read_text(full)
         except OSError:
-            _texts[path] = ""
-    return _texts[path]
+            _texts[full] = ""
+    return _texts[full]
 
 
 # ---------- routing ----------

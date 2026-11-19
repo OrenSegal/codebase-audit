@@ -178,6 +178,16 @@ class DiffModeTest(unittest.TestCase):
         self.assertEqual(calls, ["HEAD"])
 
 
+class ReadTest(unittest.TestCase):
+    def test_same_relative_path_in_two_roots_reads_each_roots_file(self):
+        one, two = tempfile.mkdtemp(), tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, one)
+        self.addCleanup(shutil.rmtree, two)
+        write(os.path.join(one, "app.py"), "ONE\n")
+        write(os.path.join(two, "app.py"), "TWO\n")
+        self.assertEqual((scan.read(one, "app.py"), scan.read(two, "app.py")), ("ONE\n", "TWO\n"))
+
+
 class ArgumentTest(unittest.TestCase):
     def scan(self, *args):
         return subprocess.run([sys.executable, SCAN, *args], capture_output=True, text=True)
