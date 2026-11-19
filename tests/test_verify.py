@@ -173,6 +173,12 @@ class VerifyTest(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertIn("verified: 1 findings", out)
 
+    def test_two_shards_reusing_an_id_are_told_to_renumber(self):
+        code, out = self.lens_run("money", {"money-app.md": FINDING + CLEAN, "money-api.md": FINDING + CLEAN})
+        self.assertEqual(code, 1, out)
+        self.assertIn("finding id MONEY-1 is used in findings/money-api.md and findings/money-app.md", out)
+        self.assertIn("renumber", out)
+
 
 if __name__ == "__main__":
     unittest.main()

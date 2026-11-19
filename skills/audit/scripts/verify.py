@@ -99,7 +99,7 @@ def check_where(where, root):
 
 def verify(out, root, only):
     lenses = load_lenses()
-    problems, ids, counts = [], [], collections.Counter()
+    problems, ids, counts, id_files = [], [], collections.Counter(), collections.defaultdict(list)
     if not os.path.isdir(out):
         return [f"{out}: no such output directory, so no audit ran"], ids, counts, set()
     covered = collections.defaultdict(set)
@@ -123,6 +123,7 @@ def verify(out, root, only):
             problems += [f"findings/{name} {f['id']}: {p}" for p in check_finding(f, lens, root, out)]
             covered[lens_name].add(f.get("probe"))
             ids.append(f["id"])
+            id_files[f["id"]].append(f"findings/{name}")
             counts[f.get("severity", "?").split()[0]] += 1  # parse() drops blank values, so this is never empty
         for probe, evidence in clean.items():
             if probe not in lens.probes:
@@ -160,8 +161,10 @@ def verify(out, root, only):
     if refuted and not only:
         problems += [f"{i} is in refuted.md and still in findings; a refuted finding is removed from findings"
                      for i in ids if mentions(refuted, i)]
-    duplicates = [i for i, n in collections.Counter(ids).items() if n > 1]
-    problems += [f"finding id {i} appears more than once; merge with an `also:` line" for i in duplicates]
+    # two shards of one lens each numbering from 1 collide here as often as one problem reported twice does
+    problems += [f"finding id {i} is used in {' and '.join(sorted(set(where)))} for {len(where)} findings; renumber "
+                 "them so each has its own id, or merge two reports of one problem with an `also:` line"
+                 for i, where in id_files.items() if len(where) > 1]
     return problems, ids, counts, seen_lenses
 
 
