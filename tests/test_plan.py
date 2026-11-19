@@ -1,5 +1,6 @@
 """Deterministic checks for scan.py's planning, routing and diff mode. Run: python3 -m unittest discover tests"""
 import collections
+import contextlib
 import os
 import shutil
 import subprocess
@@ -163,6 +164,18 @@ class DiffModeTest(unittest.TestCase):
         self.assertIn("new.ts", hot)
         self.assertNotIn("other dir", hot)
         self.assertNotIn("src/billing", hot)
+
+    def test_since_diffs_once_per_scan(self):
+        repo, _ = self.repo()
+        calls, real = [], scan.changed_since
+        scan.changed_since = lambda root, ref: calls.append(ref) or real(root, ref)
+        try:
+            args = scan.argparse.Namespace(root=repo, since="HEAD", lens=None, budget=12, max_sites=1)
+            with open(os.devnull, "w") as null, contextlib.redirect_stdout(null):
+                scan.cmd_scan(args)
+        finally:
+            scan.changed_since = real
+        self.assertEqual(calls, ["HEAD"])
 
 
 class ArgumentTest(unittest.TestCase):

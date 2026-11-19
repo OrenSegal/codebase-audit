@@ -1,4 +1,5 @@
 """Deterministic checks for scan.py routing. Run: python3 -m unittest discover tests"""
+import json
 import os
 import shutil
 import subprocess
@@ -13,6 +14,16 @@ FIXTURE = os.path.join(ROOT, "evals", "seeded-bugs", "fixtures", "pantry")
 
 def scan(*args):
     return subprocess.run([sys.executable, SCAN, *args], capture_output=True, text=True, check=True).stdout
+
+
+class ManifestTest(unittest.TestCase):
+    def test_manifests_share_one_version(self):
+        def load(*path):
+            with open(os.path.join(ROOT, *path)) as f:
+                return json.load(f)
+        version = load(".claude-plugin", "plugin.json")["version"]  # the one home; the others copy it
+        self.assertEqual(load(".claude-plugin", "marketplace.json")["plugins"][0]["version"], version)
+        self.assertEqual(load("gemini-extension.json")["version"], version)
 
 
 class ScanTest(unittest.TestCase):

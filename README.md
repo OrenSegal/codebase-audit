@@ -2,6 +2,23 @@
 
 An adversarial codebase audit that adapts to the project, has each serious finding challenged by a separate refuter, delivers fixes as a ticketed map, and untangles the structure. One Agent Skill, for any host that reads Agent Skills. The scan has detection rows for iOS, Android, Flutter, React Native, web, Node, Python, Go, Rust and Ruby; any other stack gets the seven always-on lenses. It is a set of instructions to a model plus two checking scripts; how many real defects it finds or misses has not been measured.
 
+## Engineering fundamentals
+
+The rules this repo holds itself to, each with the check that proves it. A rule without a passing check is a finding, not a claim; [AUDIT.md](AUDIT.md) says which ones hold on the last audited commit.
+
+| # | Fundamental | Checked by |
+|---|---|---|
+| 1 | One home per fact. Copies derive from it or a test ties them | `scan.py --check`; `test_readme_lens_table_matches_lens_files`; `test_manifests_share_one_version`; the table under [Single source of truth](#single-source-of-truth) |
+| 2 | Done is checked, not claimed. A missing or partial output fails | `verify.py`; `test_missing_output_directory_fails`, `test_no_findings_and_no_scan_fail`, `test_garbage_audit_fails` |
+| 3 | Runs where it says it runs: Python 3.9 and later, `git`, no installs | CI runs the unit tests on 3.9 and a current Python; `test_no_analyzer_command_downloads_its_rules` |
+| 4 | Every check runs on every change | the commands in [AGENTS.md](AGENTS.md); `.github/workflows/ci.yml` runs all but the eval suite |
+| 5 | A test goes red on the regression it guards | `python3 -m unittest discover tests`; the eval suite for prompt changes |
+| 6 | Parse at the edge and fail loud: bad input exits with `file:line` or a usage error, never a silent default | `scan.py --check`; `test_missing_root_exits_2`, `test_budget_below_one_is_refused`, `test_blank_severity_is_a_missing_field_not_a_crash` |
+| 7 | Scope is what it claims: `--since` covers every changed file, committed or not | `test_since_includes_staged_and_untracked_files`, `test_since_keeps_changed_paths_with_spaces`, `test_since_on_a_subfolder_finds_its_changed_files` |
+| 8 | Cost grows with the input, not its square | `test_since_diffs_once_per_scan`; review for the rest |
+| 9 | Read-only until approved: output stays in `.audit/`, source changes need the `approved:` line | the `resume-unapproved` eval; `test_resume_unapproved_has_the_hand_off_without_approval` |
+| 10 | Docs match the code: every documented command runs, every path exists | `test_readme_lens_table_matches_lens_files`; the design lens's docs-drift probe |
+
 ## Usage
 
 | Command | Does |
@@ -12,7 +29,7 @@ An adversarial codebase audit that adapts to the project, has each serious findi
 | `/codebase-audit:audit --untangle [area or ticket]` | The structural refactor (`UNTANGLE.md`): pieces that change together end up together |
 | `/codebase-audit:audit` again | Resumes from `.audit/HANDOFF.md`: works the next approved ticket, or asks |
 
-The skill is user-invoked, so it costs no context until you call it.
+Every argument, including `--fix` and `--out DIR`, is defined in step 1 of `skills/audit/SKILL.md`. The skill is user-invoked, so it costs no context until you call it.
 
 **In CI** (or any `claude -p` run), unanswered questions stay on `HANDOFF.md`, tickets go to the local tracker only, and no source changes without approval. Gate the job on `verify.py` as its own step. It fails when the audit left no output, a lens that fired has no findings file, a probe is unanswered, a finding points outside the repo or at a missing file, a `CONFIRMED` verdict names no reproduction file that exists, or the report omits a finding. It checks that the output is complete and well-formed, not that a finding is true:
 
@@ -73,6 +90,9 @@ The lens files are the source of truth for this table; `scan.py --check` fails i
 | Structural problem taxonomy and comment rules | `skills/audit/lenses/design.md` (`UNTANGLE.md` points to it) |
 | Test classification | `skills/audit/lenses/tests.md` (`UNTANGLE.md` points to it) |
 | Deep-module vocabulary | `mattpocock-skills:codebase-design` (used, not redefined) |
+| Version | `.claude-plugin/plugin.json` (`test_manifests_share_one_version` ties the other two manifests to it) |
+| Engineering fundamentals and their checks | `README.md`, [Engineering fundamentals](#engineering-fundamentals) |
+| Whether each fundamental holds, and the open findings | `AUDIT.md` |
 
 ## Extending it
 

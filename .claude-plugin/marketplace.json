@@ -4,7 +4,7 @@
     "name": "Oren Segal"
   },
   "metadata": {
-    "description": "Adversarial codebase audit and one-pass untangle skills."
+    "description": "Adversarial codebase audit skill with a one-pass untangle refactor."
   },
   "plugins": [
     {
