@@ -72,5 +72,19 @@ class ScanTest(unittest.TestCase):
         self.assertIn("- **ai** fires: house-ai", scan(self.repo))
 
 
+    def local_signals(self, text):
+        local = os.path.join(self.repo, "docs", "agents")
+        os.makedirs(local)
+        with open(os.path.join(local, "audit-signals.tsv"), "w") as f:
+            f.write(text)
+        return subprocess.run([sys.executable, SCAN, self.repo], capture_output=True, text=True)
+
+    def test_unknown_row_type_is_refused_with_file_and_line(self):
+        r = self.local_signals("# house rows\nsede\ttypes.catch-all\t-\tcode\twatchItems\t-\n")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("audit-signals.tsv:2: unknown row type 'sede'", r.stderr)
+        self.assertEqual(r.stdout, "")
+
+
 if __name__ == "__main__":
     unittest.main()

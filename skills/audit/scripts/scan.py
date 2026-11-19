@@ -29,6 +29,7 @@ LENS_DIR = os.path.join(os.path.dirname(HERE), "lenses")
 LOCAL_SIGNALS = os.path.join("docs", "agents", "audit-signals.tsv")
 TOOLS = os.path.join(HERE, "tools.tsv")
 
+KINDS = ("stack", "signal", "seed", "special")  # the row types of signals.tsv; any other would match nothing
 ALWAYS = ("types", "state", "failure", "security", "performance", "tests", "design")
 SEQUENTIAL_MAX_FILES = 150   # at or below this many source files, subagents cost more than they save
 SHARD_SHARE = 0.15           # a package gets its own shard of a lens when it holds this share of its sites
@@ -93,6 +94,8 @@ def _parse_signals(path):
         if len(cols) != 6:
             sys.exit(f"{origin}: expected 6 tab-separated columns, got {len(cols)}")
         kind, rid, lenses, scope, pattern, tag = cols
+        if kind not in KINDS:
+            sys.exit(f"{origin}: unknown row type '{kind}' (expected one of: {', '.join(KINDS)})")
         try:
             rx = re.compile(pattern, re.MULTILINE)
         except re.error as e:
