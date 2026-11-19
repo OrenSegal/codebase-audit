@@ -13,6 +13,7 @@ Artifact: an access matrix (resource × verb → allowed for B? → evidence).
 - **unbounded-growth**: What grows per user per day with no cap, TTL or retention job: events, logs, images, versions, notifications, soft-deleted rows? Estimate a heavy user's year against the plan's storage and row limits.
 - **migration-on-real-data** (when there are migrations): For each pending or recent migration: which existing rows break the new constraint? Write the query that counts them. Check for locks on large tables, backfills in one transaction, and changes that are not expand-then-contract.
 - **delete-account** (when users have accounts): The user deletes their account. What survives: rows in other tables, storage objects, backups, analytics, third-party processors, caches on other devices? Each survivor is a privacy finding.
+- **sensitive-at-rest** (when the store holds personal, health, financial or credential data): Each such column, bucket and backup is encrypted at rest; the most sensitive fields (government ids, health records, tokens to third parties) are encrypted at the field level or not stored; staff access to them is limited and logged; test and staging copies use masked data, not a production dump.
 
 Confirm against a local or branch database. A write against production to prove a finding is out of bounds; mark it `PLAUSIBLE` instead.
 

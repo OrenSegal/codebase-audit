@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCAN = os.path.join(ROOT, "skills", "audit", "scripts", "scan.py")
@@ -46,6 +47,37 @@ class ScanTest(unittest.TestCase):
             listed = [{p.strip() for p in cell.split(",")} - {"none"} for cell in (row[3], row[4])]
             self.assertEqual(listed[0], set(lens.probes) - lens.conditional, f"{name} unconditional probes")
             self.assertEqual(listed[1], set(lens.conditional), f"{name} conditional probes")
+
+    def test_readme_fundamentals_match_skill(self):
+        sys.path.insert(0, os.path.dirname(SCAN))
+        from scan import load_fundamentals
+        skill = load_fundamentals()
+        self.assertEqual(len(skill), 14)
+        self.assertEqual(load_fundamentals(os.path.join(ROOT, "README.md")), skill)
+
+    def test_readme_counts_match_the_lens_files(self):
+        sys.path.insert(0, os.path.dirname(SCAN))
+        from scan import ALWAYS, load_lenses, read_text
+        readme, lenses = read_text(os.path.join(ROOT, "README.md")), load_lenses()
+        words = {8: "eight", 6: "six", 14: "fourteen"}
+        self.assertIn(f"{sum(len(l.probes) for l in lenses.values())} probes in {len(lenses)} lenses", readme)
+        self.assertIn(f"{words[len(ALWAYS)]} lenses always run, {words[len(lenses) - len(ALWAYS)]} more fire", readme)
+
+    def test_check_reports_unmapped_and_unknown_probes(self):
+        sys.path.insert(0, os.path.dirname(SCAN))
+        import contextlib
+        import io
+        import scan as scan_module
+        real = scan_module.load_fundamentals()
+        broken = dict(real, F1=(real["F1"][0], real["F1"][1][1:] + ("types.no-such-probe", "design.copies")))
+        out = io.StringIO()
+        with unittest.mock.patch.object(scan_module, "load_fundamentals", return_value=broken), \
+                contextlib.redirect_stdout(out):
+            scan_module.cmd_check(scan_module.argparse.Namespace(root=ROOT))
+        text = out.getvalue()
+        self.assertIn(f"probe {real['F1'][1][0]} tests no fundamental", text)
+        self.assertIn("F1: names types.no-such-probe, which no lens file has", text)
+        self.assertIn("probe design.copies is under 2 fundamentals", text)
 
     def test_routes_lenses_from_project_signals(self):
         out = scan(self.repo)

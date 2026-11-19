@@ -12,6 +12,7 @@ Artifact: a hot-path list (user action → work done → where it runs → cost 
 - **quadratic**: Nested loops, `contains` inside a loop, repeated sorts or searches over user-sized collections. Multiply out at 400 and at 10,000 items.
 - **query** (when there is a database): N+1 queries, filters and foreign keys with no index, `select *` with no limit or pagination, counts computed by fetching rows, over-fetching columns the screen never shows.
 - **network** (when the code calls a network): Chatty sequential calls that could be one, no HTTP caching, uncompressed or oversized payloads and images, no offline cache for data the user reopens.
+- **backpressure** (when work fans out over user-sized input, or the code consumes a queue, stream or event bus): Unbounded concurrency (`Promise.all`, `asyncio.gather`, a goroutine per item over 10,000 items), queues and buffers with no cap, a consumer slower than its producer with nothing that slows the producer down, and retries that pile onto an already overloaded dependency.
 - **memory**: Retain cycles, large allocations kept alive, unbounded in-memory caches. Background work that drains battery (timers, location, polling). Leaked tasks and listeners belong to the state lens.
 
 Measure when you can (a profiler, a timed test, `EXPLAIN ANALYZE`) and mark those findings `CONFIRMED`.

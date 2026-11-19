@@ -26,6 +26,14 @@ clean: paywall-honesty — no paywall copy
 """
 
 
+def scorecard(**lines):
+    """A Fundamentals section scoring F1..F14 as `not checked`, with the given lines (F4="F4 broken: X") instead."""
+    sys.path.insert(0, os.path.dirname(VERIFY))
+    from scan import load_fundamentals
+    return "## Fundamentals\n" + "".join(f"- {lines.get(fid, fid + ' not checked: only money ran')}\n"
+                                         for fid in load_fundamentals()) + "\n## Fixes\n"
+
+
 def write(path, text):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
@@ -71,9 +79,26 @@ def garbage_audit():
 
 class VerifyTest(unittest.TestCase):
     def test_complete_findings_verify(self):
-        code, out = run(FINDING + CLEAN, report="- fix [local, high]\n  - MONEY-1")
+        code, out = run(FINDING + CLEAN, report=scorecard(F4="F4 broken: MONEY-1") + "- fix [local, high]\n  - MONEY-1")
         self.assertEqual(code, 0, out)
         self.assertIn("verified: 1 findings (1 high)", out)
+
+    def test_report_without_a_scorecard_fails(self):
+        code, out = run(FINDING + CLEAN, report="- fix [local, high]\n  - MONEY-1")
+        self.assertEqual(code, 1, out)
+        self.assertIn("REPORT.md has no Fundamentals scorecard", out)
+
+    def test_scorecard_must_score_every_fundamental(self):
+        report = scorecard(F4="F4 broken: MONEY-1").replace("- F14 not checked: only money ran\n", "") + "MONEY-1"
+        code, out = run(FINDING + CLEAN, report=report)
+        self.assertEqual(code, 1, out)
+        self.assertIn("scorecard does not score F14", out)
+        self.assertNotIn("does not score F1\n", out)
+
+    def test_scorecard_cannot_say_a_broken_fundamental_holds(self):
+        code, out = run(FINDING + CLEAN, report=scorecard(F4="F4 holds") + "MONEY-1")
+        self.assertEqual(code, 1, out)
+        self.assertIn("scorecard says F4 holds, but MONEY-1 breaks it", out)
 
     def test_unanswered_probe_fails(self):
         code, out = run(FINDING + CLEAN.replace("clean: paywall-honesty — no paywall copy\n", ""))
