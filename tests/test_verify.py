@@ -146,5 +146,13 @@ class VerifyTest(unittest.TestCase):
         self.assertEqual(code, 0, out)
 
 
+    def test_scan_md_that_names_no_firing_lens_fails(self):
+        for scan in ("", "# Scan\n\nlenses run: money, security, types\n"):
+            with self.subTest(scan=scan):
+                code, out = run(FINDING + CLEAN, report="- MONEY-1", scan=scan)
+                self.assertEqual(code, 1, out)
+                self.assertIn("SCAN.md names no lens that fires", out)
+
+
 if __name__ == "__main__":
     unittest.main()

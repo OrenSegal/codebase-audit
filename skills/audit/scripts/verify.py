@@ -139,6 +139,9 @@ def verify(out, root, only):
     scan_md = os.path.join(out, "SCAN.md")
     if os.path.isfile(scan_md):
         fired = set(FIRES.findall(read_text(scan_md)))
+        if not fired:  # seven lenses always fire and --lens names at least one, so scan.py's output never has none
+            problems.append("SCAN.md names no lens that fires, so it is not scan.py's output and the lenses that "
+                            "should have findings are unknown; write it with `scan.py <path> > SCAN.md`")
         problems += [f"lens {l} fires in SCAN.md but has no findings file" for l in sorted(fired - seen_lenses)
                      if not only or l in only]
     else:
