@@ -86,5 +86,25 @@ class ScanTest(unittest.TestCase):
         self.assertEqual(r.stdout, "")
 
 
+    def test_wrong_column_count_is_refused_with_file_and_line(self):
+        r = self.local_signals("seed\ttypes.catch-all\tcode\twatchItems\t-\n")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("audit-signals.tsv:1: expected 6 tab-separated columns, got 5", r.stderr)
+
+    def test_bad_regex_is_refused_with_file_and_line(self):
+        r = self.local_signals("seed\ttypes.catch-all\t-\tcode\twatch(Items\t-\n")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("audit-signals.tsv:1: bad regex for types.catch-all", r.stderr)
+        self.assertNotIn("Traceback", r.stderr)
+
+    def test_check_names_a_seed_with_no_probe_and_a_signal_with_no_lens(self):
+        self.local_signals("seed\ttypes.no-such-probe\t-\tcode\twatchItems\t-\n"
+                           "signal\thouse\tno-such-lens\tcode\twatchItems\t-\n")
+        r = subprocess.run([sys.executable, SCAN, self.repo, "--check"], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("audit-signals.tsv:1: seed types.no-such-probe names no probe in lenses/types.md", r.stdout)
+        self.assertIn("audit-signals.tsv:2: lens 'no-such-lens' has no lenses/no-such-lens.md", r.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

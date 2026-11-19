@@ -3,6 +3,7 @@ Run: python3 -m unittest discover tests"""
 import glob
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -37,6 +38,17 @@ class ScaffoldTest(unittest.TestCase):
             text = f.read()
         self.assertIn("- next:", text)
         self.assertNotIn("- approved:", text)
+
+
+    def test_parallel_monorepo_gets_the_plan_its_grader_expects(self):
+        work, _ = scaffold("parallel-monorepo")
+        scan = os.path.join(os.path.dirname(EVALS), "skills", "audit", "scripts", "scan.py")
+        out = subprocess.run([sys.executable, scan, work, "--lens", "failure,types", "--budget", "3"],
+                             capture_output=True, text=True, check=True).stdout
+        self.assertIn("- plan: parallel: 3 subagents (budget 3), one per lens; "
+                      "shard types into packages/api, packages/app", out)
+        for planted in ("packages/app/src/sync.ts:7: catch {}", "packages/api/src/status.ts:9: default:"):
+            self.assertIn(planted, out)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 """Deterministic checks for scan.py's planning, routing and diff mode. Run: python3 -m unittest discover tests"""
 import collections
 import contextlib
+import io
 import os
 import shutil
 import subprocess
@@ -56,6 +57,54 @@ class PlanTest(unittest.TestCase):
                     "tiny2/c.ts": hits(types__catch_all=5)}
         text = scan.plan(["types"], {"types": 100}, per_file, ["big", "tiny", "tiny2"], 500, 4)
         self.assertIn("shard types into big, rest", text)
+
+
+    def test_a_package_with_exactly_the_shard_share_gets_its_own_shard(self):
+        per_file = {"big/a.ts": hits(types__catch_all=85), "small/b.ts": hits(types__catch_all=15)}
+        text = scan.plan(["types"], {"types": 100}, per_file, ["big", "small"], 500, 4)
+        self.assertIn("shard types into big, small", text)
+
+    def test_a_lens_is_not_sharded_into_more_parts_than_the_spare_budget_allows(self):
+        per_file = {f"p{i}/x.ts": hits(types__catch_all=10) for i in range(3)}
+        text = scan.plan(["types", "state"], {"types": 30}, per_file, ["p0", "p1", "p2"], 500, 3)
+        self.assertEqual(text, "parallel: 2 subagents (budget 3), one per lens")
+
+
+class CheckTest(unittest.TestCase):
+    def check(self, change):
+        """Output of `scan.py --check` against a copy of the lens files, after `change(copy)` edits it."""
+        lenses = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, lenses)
+        shutil.copytree(scan.LENS_DIR, lenses, dirs_exist_ok=True)
+        change(lenses)
+        real, scan.LENS_DIR = scan.LENS_DIR, lenses
+        self.addCleanup(setattr, scan, "LENS_DIR", real)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = scan.cmd_check(scan.argparse.Namespace(root=tempfile.gettempdir()))
+        return code, out.getvalue()
+
+    def test_unchanged_lens_files_pass(self):
+        code, out = self.check(lambda lenses: None)
+        self.assertEqual((code, out[:3]), (0, "ok:"))
+
+    def test_fires_line_that_disagrees_with_the_routing_fails(self):
+        def always_lens_says_when(lenses):
+            path = os.path.join(lenses, "types.md")
+            write(path, scan.read_text(path).replace("Fires: always", "Fires: when the project has types"))
+        code, out = self.check(always_lens_says_when)
+        self.assertEqual(code, 1)
+        self.assertIn("lenses/types.md: says 'Fires: when the project has types' but scan.py ALWAYS includes it", out)
+
+    def test_lens_nothing_fires_and_lens_without_fires_line_or_probes_fail(self):
+        def add_lenses(lenses):
+            write(os.path.join(lenses, "orphan.md"), "Fires: when the moon is full\n\n- **tides**: Are there tides?\n")
+            write(os.path.join(lenses, "empty.md"), "# Empty\n")
+        code, out = self.check(add_lenses)
+        self.assertEqual(code, 1)
+        self.assertIn("lenses/orphan.md: nothing fires this lens", out)
+        self.assertIn("lenses/empty.md: no probes", out)
+        self.assertIn("lenses/empty.md: no 'Fires: always' or 'Fires: when <condition>' line", out)
 
 
 class ToolsTest(unittest.TestCase):

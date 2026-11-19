@@ -180,5 +180,36 @@ class VerifyTest(unittest.TestCase):
         self.assertIn("renumber", out)
 
 
+    def test_lens_that_fires_in_the_scan_needs_a_findings_file(self):
+        code, out = run(FINDING + CLEAN, scan="- **money** fires: requested\n- **ux** fires: ui (index.html)\n")
+        self.assertEqual(code, 1, out)
+        self.assertIn("lens ux fires in SCAN.md but has no findings file", out)
+
+    def test_findings_file_for_no_lens_fails(self):
+        code, out = self.lens_run("money", {"money.md": FINDING + CLEAN, "moeny-api.md": FINDING + CLEAN})
+        self.assertEqual(code, 0, out)  # --lens money reads only money's files
+        out_dir = tempfile.mkdtemp()
+        write(os.path.join(out_dir, "findings", "moeny.md"), FINDING + CLEAN)
+        code, out = verify(out_dir)
+        self.assertEqual(code, 1, out)
+        self.assertIn("findings/moeny.md: no lens named 'moeny'", out)
+
+    def test_values_outside_the_finding_format_fail(self):
+        for field, bad, problem in (
+                ("- probe: counter-integrity", "- probe: counter-honesty", "probe 'counter-honesty' is not in lenses/money.md"),
+                ("- detectability: silent", "- detectability: obvious", "detectability 'obvious' is not one of"),
+                ("- verdict: CONFIRMED (repro/quota.test.js)", "- verdict: FIXED", "verdict 'FIXED' is not CONFIRMED or PLAUSIBLE"),
+                ("quota.ts:13", "quota.ts:999", "where line 999 is past the end of src/scan/quota.ts")):
+            with self.subTest(bad=bad):
+                code, out = run(FINDING.replace(field, bad) + CLEAN + "clean: counter-integrity — covered above\n")
+                self.assertEqual(code, 1, out)
+                self.assertIn(problem, out)
+
+    def test_clean_line_for_an_unknown_probe_fails(self):
+        code, out = run(FINDING + CLEAN + "clean: paywall-honest — typo\n")
+        self.assertEqual(code, 1, out)
+        self.assertIn("clean line names unknown probe 'paywall-honest'", out)
+
+
 if __name__ == "__main__":
     unittest.main()

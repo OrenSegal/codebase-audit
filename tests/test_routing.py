@@ -90,6 +90,27 @@ class RoutingTest(unittest.TestCase):
         self.assertIn("public/app.js:2: catch {}", out)
         self.assertNotIn("public/app.js:1:", out)
 
+    def sites(self, files, *args):
+        out = subprocess.run([sys.executable, SCAN, self.project(files), *args], capture_output=True, text=True, check=True).stdout
+        return [line.strip() for line in out.splitlines() if line.startswith("  - ")]
+
+    def test_sites_per_probe_are_capped_across_files_and_the_hit_count_is_not(self):
+        swallow = "try { a() } catch {}\ntry { b() } catch {}\n"
+        root = self.project({"one.ts": swallow, "two.ts": swallow})
+        out = subprocess.run([sys.executable, SCAN, root, "--max-sites", "3"], capture_output=True, text=True, check=True).stdout
+        self.assertIn("`failure.silent-catch` (4 hits)", out)
+        self.assertEqual(out.count(": catch {}"), 3)
+
+    def test_source_sites_come_before_test_sites(self):
+        swallow = "try { a() } catch {}\n"
+        self.assertEqual(self.sites({"a.test.ts": swallow, "z.ts": swallow}),
+                         ["- z.ts:1: catch {}", "- a.test.ts:1: catch {}"])
+
+    def test_file_over_the_size_limit_is_not_seeded(self):
+        filler = "export const n = 1\n" * (scan_module.MAX_BYTES // 19 + 1)
+        self.assertEqual(self.sites({"generated.ts": filler + "try { a() } catch {}\n", "small.ts": "try { b() } catch {}\n"}),
+                         ["- small.ts:1: catch {}"])
+
     def test_shell_scripts_count_as_source(self):
         self.assertIn("languages: sh 1", self.scan({"hooks/guard.sh": "#!/bin/sh\nsleep 1\n"}))
 
