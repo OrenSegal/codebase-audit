@@ -22,5 +22,6 @@ Artifact: a survivor list (mutation or deletion that no test caught) and a class
 - **critical-gaps**: Each critical path no test exercises end to end through its public interface.
 - **contract** (when a client and a server ship separately): Tests that pin the shapes they exchange (schema snapshots, contract tests, generated types checked in CI), so a server change that would break the shipped client fails a build instead of a user.
 - **property-candidates**: Invariants a property-based or fuzz test would check better than examples: encode/decode round trips, idempotent operations, counters that never go negative, parsers fed arbitrary input.
+- **runs-in-ci**: The test suite, type checker, linter and formatter each run automatically on every change and block the merge when they fail. With no CI at all, that is the finding; a check that only runs on a developer's machine is a check that stops running.
 
 Done: every critical module went through delete-test and mutation, and every test in scope has a class and an action.

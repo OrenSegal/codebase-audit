@@ -6,7 +6,7 @@ On `cfa0cf9`, `scan.py --check` and the unit tests pass on Python 3.12 and on th
 
 ## Fundamentals: where each one stands
 
-The statements and their checks live in [README.md](README.md#engineering-fundamentals). Status on `cfa0cf9` plus this branch:
+The statements and their checks live in [README.md](README.md#fundamentals-this-repo-holds-itself-to). Status on `cfa0cf9` plus this branch:
 
 | # | Fundamental | Status |
 |---|---|---|

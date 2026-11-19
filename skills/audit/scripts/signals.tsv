@@ -85,4 +85,18 @@ seed	operations.secrets-handling	-	yml,yaml	echo\s+\$\{\{\s*secrets\.|set -x|ACT
 seed	security.crypto	-	code	(?i)\bmd5\b|sha1\(|createHash\(['\"](md5|sha1)['\"]|Math\.random\(\)|random\.random\(|Insecure\.(MD5|SHA1)|AES/ECB|kCCOptionECBMode|==\s*(token|secret|signature|hmac)\b	-
 seed	failure.dependency-outage	-	code	new (Stripe|Twilio|OpenAI|Anthropic|Resend|Postmark)\(|createClient\(|initializeApp\(|Purchases\.configure|GoogleGenerativeAI\(	-
 seed	design.docs-drift	-	md	`(npm|pnpm|yarn|npx|make|python3?|swift|xcodebuild|flutter|go|cargo|bundle|supabase) [^`]+`	-
+seed	correctness.null-paths	-	code	\w!\.\w|\w!\s*$|\.get\(\)\.|\bas! |!!\.|\.unwrap\(\)\.|Optional\.get\(\)	-
+seed	correctness.numeric	-	code	parseInt\(\s*[^,()]+\)|==\s*-?\d+\.\d+\b|\bNaN\b|isNaN\(|toFixed\(|Math\.(round|floor|ceil)\([^)]*/	-
+seed	correctness.equality-identity	-	code	def \w+\([^)]*=\s*(\[\]|\{\}|set\(\))\s*[,)]|\bis\s+(['\"]|-?\d)|===?\s*\{|===?\s*\[	-
+seed	correctness.resource-leak	-	code	(?<!with )\bopen\([^)]*\)\s*$|createReadStream\(|getConnection\(|new (FileInputStream|FileOutputStream|Socket)\(|os\.(Open|Create)\(|sql\.Open\(|\.acquire\(\)	-
+seed	correctness.text-encoding	-	code	\.length\s*[<>]=?\s*\d+|\.(substring|substr|slice)\(0,\s*\d+\)|\.toLowerCase\(\)\s*===?|\.lower\(\)\s*==|encoding\s*=\s*['\"]latin|\.encode\(\)\[	-
+seed	correctness.regex	-	code	\([^()]*[+*]\)[+*]|new RegExp\(|re\.(compile|match|search)\(\s*[a-z_]\w*\s*[,)]|NSRegularExpression\(|Regex\(\s*[a-z_]\w*	-
+seed	correctness.ignored-result	-	code	^\s*[\w.]+\.(replace|strip|lstrip|rstrip|upper|lower|trim|toUpperCase|toLowerCase|concat)\([^)]*\)\s*;?\s*$|^\s*_\s*=\s*\w+\.\w+\(|^\s*sorted\(	-
+seed	failure.shared-memory	-	code	threading\.Thread|ThreadPoolExecutor|DispatchQueue\.global|\bgo func\b|thread::spawn|std::thread|Executors\.new|\bsynchronized\b|sync\.Mutex|nonisolated\(unsafe\)|@unchecked Sendable|new Worker\(	-
+seed	security.web-surface	-	code	Access-Control-Allow-Origin|\bcors\(|credentials:\s*true|SameSite|httpOnly|res\.redirect\(|redirect\(\s*req\.|Content-Security-Policy|csrf_exempt|@csrf_exempt	-
+seed	security.mass-assignment	-	code	\.(create|update|insert|upsert|save)\(\s*(req\.body|request\.(json|data|form)|body)\s*\)|\.\.\.req\.body|\*\*request\.(json|data|form)|params\.permit!|Object\.assign\([^,]+,\s*req\.body	-
+seed	security.audit-trail	-	code,sql	(?i)audit_?log|activity_?log|\bimpersonat|set_?role|grant_?admin|is_?admin\s*=	-
+seed	performance.backpressure	-	code	Promise\.all\(|Promise\.allSettled\(|asyncio\.gather\(|concurrentPerform|errgroup|\.parallelStream\(\)|withTaskGroup|forEach\(\s*async	-
+seed	data.sensitive-at-rest	-	code,sql,prisma	(?i)\b(ssn|social_?security|passport|national_?id|date_?of_?birth|dob|diagnosis|medical|health_?record|iban|card_?number|access_?token|refresh_?token)\b	-
+seed	operations.reproducible-build	-	yml,yaml,json	(?i)npm install(?! -g)|pip install (?!-r|-e|--require-hashes)|:latest\b|\"node\"\s*:\s*\"[>^*]	-
 special	hack-markers	-	code	\b(HACK|FIXME|XXX)\b|(?i:workaround)	hack-markers
