@@ -123,6 +123,11 @@ class RoutingTest(unittest.TestCase):
         self.assertTrue(scan_module.tool_available(os.path.join(root, "packages", "web"), "npx --no-install tsc --noEmit"))
         self.assertFalse(scan_module.tool_available(os.path.join(root, "packages", "web"), "npx --no-install eslint ."))
 
+    def test_analyzer_commands_quote_the_repo_paths_they_carry(self):
+        out = self.scan({"my app; touch pwned #/tsconfig.json": "{}", "requirements $(touch pwned).txt": "left-pad==1.3.0\n"})
+        self.assertIn("`cd 'my app; touch pwned #' && npx --no-install tsc --noEmit`", out)
+        self.assertIn("`pip-audit -r 'requirements $(touch pwned).txt'`", out)
+
     def test_no_analyzer_command_downloads_its_rules(self):
         self.assertFalse([t.name for t in scan_module.load_tools() if "--config p/" in t.command])
 

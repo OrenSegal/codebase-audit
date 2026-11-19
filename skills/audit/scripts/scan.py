@@ -20,6 +20,7 @@ import concurrent.futures
 import dataclasses
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -181,7 +182,7 @@ def relevant_tools(root, files, fired):
             folders = outermost({os.path.dirname(f) or "." for f in matches})
         for folder in folders:
             match = next((f for f in matches if (os.path.dirname(f) or ".") == folder), matches[0])
-            command = tool.command.replace("{file}", os.path.basename(match))
+            command = tool.command.replace("{file}", shlex.quote(os.path.basename(match)))
             found.append((dataclasses.replace(tool, command=command), folder,
                           tool_available(os.path.join(root, folder), command)))
     return found
@@ -443,7 +444,9 @@ def render(ctx):
     out += ["", "## Tools", "", "Run each available one and save its output to `<out>/tools/<name>.txt`; its warnings are leads for the lens named.", ""]
     for tool, folder, available in ctx["tools"]:
         state = "available" if available else "not installed: note it, never install"
-        run = tool.command if folder == "." else f"cd {folder} && {tool.command}"
+        # folder and file names come from the audited repo and end up in a shell: quote them, so a space
+        # cannot break the command and a name like `a; rm -rf ~` cannot become one
+        run = tool.command if folder == "." else f"cd {shlex.quote(folder)} && {tool.command}"
         out.append(f"- **{tool.name}** → {tool.lens}: `{run}` ({state})")
     if not ctx["tools"]:
         out.append("- none relevant")
