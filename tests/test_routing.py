@@ -79,6 +79,11 @@ class RoutingTest(unittest.TestCase):
         self.assertIn("- **money** fires: money (../../package.json)", out)
         self.assertIn("- **ai** fires: house-ai (charge.ts)", out)
 
+    def test_python_tuple_unpacking_is_not_a_swallowed_error(self):
+        out = self.scan({"pair.py": "def pair():\n    return 1, 2\n\n\nfirst, _ = pair()\n"})
+        self.assertNotIn("failure.silent-catch", out)
+        self.assertIn("- swallowed-errors: 0", out)
+
     def test_shell_scripts_count_as_source(self):
         self.assertIn("languages: sh 1", self.scan({"hooks/guard.sh": "#!/bin/sh\nsleep 1\n"}))
 

@@ -37,7 +37,8 @@ seed	state.truth-owner	-	code	UserDefaults|@AppStorage|localStorage\.|SharedPref
 seed	state.lifetime	-	code	\bTask \{|Task\.detached|useEffect\(|GlobalScope|StreamSubscription|setInterval\(|addObserver\(|\.listen\(|\.subscribe\(|Timer\.scheduledTimer	-
 seed	failure.await-race	-	code	^\s*(public |private |internal )?actor \w+|FOR UPDATE|\.transaction\(|BEGIN\b	-
 seed	failure.pull-the-plug	-	code	\.write\(to:|writeFileSync|fs\.writeFile|open\([^)]*['\"]w|FileManager\.default\.(createFile|moveItem)|\.save\(\)	-
-seed	failure.silent-catch	-	code	try\?|catch\s*(\([^)]*\))?\s*\{\s*\}|except[^:\n]*:\s*pass|\.catch\(\(\)\s*=>\s*(\{\s*\}|null|undefined)\)|runCatching|_ = err\b|\?\?\s*(\[\]|\"\"|0)\b|,\s*_\s*:?=\s|\.unwrap\(\)|\blet _ =	swallowed-errors
+seed	failure.silent-catch	-	code	try\?|catch\s*(\([^)]*\))?\s*\{\s*\}|except[^:\n]*:\s*pass|\.catch\(\(\)\s*=>\s*(\{\s*\}|null|undefined)\)|runCatching|_ = err\b|\?\?\s*(\[\]|\"\"|0)\b|\.unwrap\(\)|\blet _ =	swallowed-errors
+seed	failure.silent-catch	-	go	,\s*_\s*:?=\s	swallowed-errors
 seed	failure.no-screen	-	code	isLoading\s*=\s*true|setLoading\(true\)|setIsLoading\(true\)|loading\s*=\s*true|ProgressView\(\)|CircularProgressIndicator	-
 seed	failure.logs-only-debug	-	code	(print|console\.log|NSLog|Log\.[dew]|logger\.\w+|os_log)\(.*(token|password|email|secret|authorization)	-
 seed	failure.timeouts-retries	-	code	\bsleep\(|Thread\.sleep|setTimeout\(|Task\.sleep|asyncio\.sleep|time\.Sleep|Future\.delayed|asyncAfter|[Rr]etry\w*\(|max_?[Rr]etries	sleeps-retries
