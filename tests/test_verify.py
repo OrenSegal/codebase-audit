@@ -154,5 +154,25 @@ class VerifyTest(unittest.TestCase):
                 self.assertIn("SCAN.md names no lens that fires", out)
 
 
+    def lens_run(self, lens, files=None):
+        out = tempfile.mkdtemp()
+        for name, text in (files or {"money.md": FINDING + CLEAN}).items():
+            write(os.path.join(out, "findings", name), text)
+        write(os.path.join(out, "repro", "quota.test.js"), "// red\n")
+        write(os.path.join(out, "SCAN.md"), "- **money** fires: requested\n")
+        r = subprocess.run([sys.executable, VERIFY, out, "--root", REPO, "--lens", lens], capture_output=True, text=True)
+        return r.returncode, r.stdout + r.stderr
+
+    def test_lens_filter_refuses_a_lens_that_does_not_exist(self):
+        code, out = self.lens_run("money,mony")
+        self.assertEqual(code, 2, out)
+        self.assertIn("unknown lens: mony", out)
+
+    def test_lens_filter_allows_spaces_after_commas(self):
+        code, out = self.lens_run("types, money")
+        self.assertEqual(code, 0, out)
+        self.assertIn("verified: 1 findings", out)
+
+
 if __name__ == "__main__":
     unittest.main()

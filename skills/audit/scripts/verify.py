@@ -171,7 +171,10 @@ def main():
     ap.add_argument("--root", default=".", help="the audited repo, for checking `where` paths")
     ap.add_argument("--lens", help="verify only these lenses (a hunter checking its own file)")
     a = ap.parse_args()
-    only = set(a.lens.split(",")) if a.lens else None
+    only = {name.strip() for name in a.lens.split(",")} if a.lens else None
+    unknown = sorted((only or set()) - set(load_lenses()))
+    if unknown:
+        ap.error(f"unknown lens: {', '.join(unknown)}")  # exits 2: a mistyped lens would otherwise be skipped unchecked
     problems, ids, counts, lenses = verify(a.out, os.path.abspath(a.root), only)
     if problems:
         print("\n".join(problems))
