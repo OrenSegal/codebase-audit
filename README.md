@@ -9,13 +9,13 @@ The rules this repo holds itself to, each with the check that proves it. A rule 
 | # | Fundamental | Checked by |
 |---|---|---|
 | 1 | One home per fact. Copies derive from it or a test ties them | `scan.py --check`; `test_readme_lens_table_matches_lens_files`; `test_manifests_share_one_version`; the table under [Single source of truth](#single-source-of-truth) |
-| 2 | Done is checked, not claimed. A missing or partial output fails | `verify.py`; `test_missing_output_directory_fails`, `test_no_findings_and_no_scan_fail`, `test_garbage_audit_fails` |
+| 2 | Done is checked, not claimed. A missing or partial output fails | `verify.py`; `test_missing_output_directory_fails`, `test_no_findings_and_no_scan_fail`, `test_scan_md_that_names_no_firing_lens_fails`, `test_lens_that_fires_in_the_scan_needs_a_findings_file`, `test_garbage_audit_fails` |
 | 3 | Runs where it says it runs: Python 3.9 and later, `git`, no installs | CI runs the unit tests on 3.9 and a current Python; `test_no_analyzer_command_downloads_its_rules` |
 | 4 | Every check runs on every change | the commands in [AGENTS.md](AGENTS.md); `.github/workflows/ci.yml` runs all but the eval suite |
 | 5 | A test goes red on the regression it guards | `python3 -m unittest discover tests`; the eval suite for prompt changes |
-| 6 | Parse at the edge and fail loud: bad input exits with `file:line` or a usage error, never a silent default | `scan.py --check`; `test_missing_root_exits_2`, `test_budget_below_one_is_refused`, `test_blank_severity_is_a_missing_field_not_a_crash` |
-| 7 | Scope is what it claims: `--since` covers every changed file, committed or not | `test_since_includes_staged_and_untracked_files`, `test_since_keeps_changed_paths_with_spaces`, `test_since_on_a_subfolder_finds_its_changed_files` |
-| 8 | Cost grows with the input, not its square | `test_since_diffs_once_per_scan`; review for the rest |
+| 6 | Parse at the edge and fail loud: bad input exits with `file:line` or a usage error, never a silent default | `scan.py --check`; `test_missing_root_exits_2`, `test_budget_below_one_is_refused`, `test_unknown_row_type_is_refused_with_file_and_line`, `test_bad_regex_is_refused_with_file_and_line`, `test_lens_filter_refuses_a_lens_that_does_not_exist`, `test_blank_severity_is_a_missing_field_not_a_crash` |
+| 7 | Scope is what it claims: `--since` covers every changed file, committed or not, and a subfolder scan still reads the manifests and house signals above it | `test_since_includes_staged_and_untracked_files`, `test_since_keeps_changed_paths_with_spaces`, `test_since_on_a_subfolder_finds_its_changed_files`, `test_subfolder_scan_reads_the_repo_manifests_and_house_signals_above_it` |
+| 8 | Cost grows with the input, not its square | `test_since_diffs_once_per_scan`, `test_minified_line_is_not_seeded_and_later_lines_keep_their_numbers`; review for the rest |
 | 9 | Read-only until approved: output stays in `.audit/`, source changes need the `approved:` line | the `resume-unapproved` eval; `test_resume_unapproved_has_the_hand_off_without_approval` |
 | 10 | Docs match the code: every documented command runs, every path exists | `test_readme_lens_table_matches_lens_files`; the design lens's docs-drift probe |
 
@@ -73,7 +73,7 @@ Each lens file opens with a `Fires:` line; probes marked *(when …)* are condit
 | ux | a user interface | cardinality, day-2-day-30, copy-lie, dead-ends, no-undo, a11y-extremes | interrupted-user, locale-adversary |
 | operations | CI, deployment or infrastructure config | ci-gates, secrets-handling, dependency-updates | backup-restore, alerting, runbooks, cost-runaway |
 
-Routing is pattern matching over file paths, manifests and source (`signals.tsv`), so it is as good as its rows: a stack or SDK with no row gets the seven always-on lenses and no candidate sites until a row is added, and recon can override a lens the scan fired or skipped. Lockfiles, fixture folders and build or vendor folders are not read for routing; the scan's `not read for routing` line lists them.
+Routing is pattern matching over file paths, manifests and source (`signals.tsv`), so it is as good as its rows: a stack or SDK with no row gets the seven always-on lenses and no candidate sites until a row is added, and recon can override a lens the scan fired or skipped. Lockfiles, fixture folders and build or vendor folders are not read for routing; the scan's `not read for routing` line lists them. Files over 1 MB are not read, and lines over 1,000 characters (minified bundles, embedded data) are not searched for candidate sites; the scan does not list those.
 
 The lens files are the source of truth for this table; `scan.py --check` fails if a `Fires:` line disagrees with the routing.
 

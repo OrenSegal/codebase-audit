@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# A two-package monorepo past the sequential threshold: 3 planted defects plus 200 generated filler modules.
+# A two-package monorepo past the sequential threshold: 4 planted defects (3 required, see graders/result.md) plus 200 generated filler modules.
 set -euo pipefail
 cp -R "$(dirname "${BASH_SOURCE[0]}")/fixtures/repo/." .
 for pkg in app api; do
