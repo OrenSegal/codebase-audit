@@ -69,6 +69,16 @@ class RoutingTest(unittest.TestCase):
         out = self.scan({"status.ts": "switch (x) {\n  case 1:\n    break;\n\n\n  default:\n    y();\n}\n"})
         self.assertIn("status.ts:6: default:", out)
 
+    def test_subfolder_scan_reads_the_repo_manifests_and_house_signals_above_it(self):
+        root = self.project({"package.json": json.dumps({"dependencies": {"stripe": "16.2.0"}}),
+                             "docs/agents/audit-signals.tsv": "signal\thouse-ai\tai\tcode\tsummarize\\(\t-\n",
+                             "src/billing/charge.ts": "export const charge = (cents: number) => summarize(cents)\n"})
+        subprocess.run(["git", "-C", root, "init", "-q"], check=True)
+        out = subprocess.run([sys.executable, SCAN, os.path.join(root, "src", "billing")],
+                             capture_output=True, text=True, check=True).stdout
+        self.assertIn("- **money** fires: money (../../package.json)", out)
+        self.assertIn("- **ai** fires: house-ai (charge.ts)", out)
+
     def test_shell_scripts_count_as_source(self):
         self.assertIn("languages: sh 1", self.scan({"hooks/guard.sh": "#!/bin/sh\nsleep 1\n"}))
 

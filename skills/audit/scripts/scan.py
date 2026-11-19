@@ -80,8 +80,9 @@ class Row:
 def load_rows(root=None):
     """Rows from signals.tsv, plus the audited project's own LOCAL_SIGNALS file when present."""
     paths = [os.path.join(HERE, "signals.tsv")]
-    if root and os.path.isfile(os.path.join(root, LOCAL_SIGNALS)):
-        paths.append(os.path.join(root, LOCAL_SIGNALS))
+    if root:  # a scan of src/billing still gets the rows the project keeps at its top
+        local = {os.path.realpath(os.path.join(base, LOCAL_SIGNALS)) for base in (root, repo_top(root))}
+        paths += sorted(path for path in local if os.path.isfile(path))
     return [row for path in paths for row in _parse_signals(path)]
 
 
@@ -193,6 +194,26 @@ def git(root, *args):
         return None
 
 
+def repo_top(root):
+    """The git work tree that holds root, or root itself outside a repository."""
+    return (git(root, "rev-parse", "--show-toplevel") or "").strip() or root
+
+
+def ancestor_manifests(root):
+    """Manifests in the folders above root up to the repo top, as paths relative to root: the dependencies of
+    src/billing are declared in the package.json above it, so a scan of the subfolder reads that too."""
+    top, folder, found = os.path.realpath(repo_top(root)), os.path.realpath(root), []
+    while folder != top and folder.startswith(top + os.sep):
+        folder = os.path.dirname(folder)
+        found += [os.path.relpath(os.path.join(folder, name), os.path.realpath(root))
+                  for name in sorted(os.listdir(folder)) if is_manifest(name) and os.path.isfile(os.path.join(folder, name))]
+    return found
+
+
+def is_manifest(path):
+    return os.path.basename(path) in MANIFESTS or os.path.basename(path).startswith("requirements")
+
+
 def every_file(root):
     out = git(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard")
     if out is None:
@@ -283,7 +304,7 @@ def read(root, path):
 
 def detect(root, rows, files):
     """{row id: evidence path} for every stack and signal row that matches the repo."""
-    manifests = [f for f in files if os.path.basename(f) in MANIFESTS or os.path.basename(f).startswith("requirements")]
+    manifests = [f for f in files if is_manifest(f)] + ancestor_manifests(root)
     hits = {}
     for row in rows:
         if row.kind not in ("stack", "signal"):
