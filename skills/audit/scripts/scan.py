@@ -35,6 +35,8 @@ SEQUENTIAL_MAX_FILES = 150   # at or below this many source files, subagents cos
 SHARD_SHARE = 0.15           # a package gets its own shard of a lens when it holds this share of its sites
 MAX_SHARDS_PER_LENS = 4
 MAX_BYTES = 1_000_000        # larger files are generated or vendored; skip them
+MAX_LINE = 1_000             # a longer line is minified or embedded data: a site in it is no lead, and patterns
+                             # with `.*` backtrack across it once per match, so a one-line bundle costs its square
 
 CODE = {"swift", "m", "mm", "kt", "kts", "java", "ts", "tsx", "js", "jsx", "mjs", "cjs", "py", "go",
         "rs", "dart", "rb", "php", "cs", "vue", "svelte", "astro", "scala", "ex", "exs",
@@ -342,6 +344,8 @@ def route(rows, hits, requested):
 def _seed_file(job):
     root, path, rows, lenses, max_sites = job
     text = read(root, path)
+    if len(text) > MAX_LINE:  # blank the overlong lines, keeping every other line's number
+        text = "\n".join(line if len(line) <= MAX_LINE else "" for line in text.split("\n"))
     sites, hits, counts = [], collections.Counter(), collections.Counter()
     for row in rows if text else ():
         if not in_scope(row.scope, path):

@@ -84,6 +84,12 @@ class RoutingTest(unittest.TestCase):
         self.assertNotIn("failure.silent-catch", out)
         self.assertIn("- swallowed-errors: 0", out)
 
+    def test_minified_line_is_not_seeded_and_later_lines_keep_their_numbers(self):
+        minified = "el.innerHTML=a.find(function(b){return b.id===c}),console.log(d);" * 40  # one 2,600-character line
+        out = self.scan({"public/app.js": minified + "\ntry { load() } catch {}\n"})
+        self.assertIn("public/app.js:2: catch {}", out)
+        self.assertNotIn("public/app.js:1:", out)
+
     def test_shell_scripts_count_as_source(self):
         self.assertIn("languages: sh 1", self.scan({"hooks/guard.sh": "#!/bin/sh\nsleep 1\n"}))
 
