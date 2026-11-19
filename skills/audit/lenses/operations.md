@@ -13,5 +13,6 @@ Artifact: a path-to-production list (change → CI gates it passes → how it de
 - **cost-runaway** (when the project uses usage-billed services): A loop, retry storm, abusive user or leaked key that would multiply the bill (model calls, egress, function invocations, SMS, email) hits a budget alert or a hard cap first.
 - **secrets-handling**: Secrets come from the platform's secret store, scoped per environment, rotatable without a code change, and never printed in CI logs or baked into build artifacts.
 - **dependency-updates**: Dependencies get updated on a schedule (Dependabot, Renovate, a recurring task), and the CI gates are trusted enough that an update PR can merge.
+- **reproducible-build**: The toolchain is pinned (`.nvmrc`, `.python-version`, `rust-toolchain.toml`, a container base image by digest), lockfiles are committed and used in CI (`npm ci`, `--frozen-lockfile`), and a build from a clean clone today gives the same artifact as last week's. A build that pulls `latest` of anything is a finding.
 
 Done: the path-to-production list covers every deployable in the repo, and every critical path from recon has an alerting answer.

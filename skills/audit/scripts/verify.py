@@ -13,7 +13,9 @@ Checks, per findings file (findings/<lens>[-<shard>].md):
   - every `### ` heading is a finding heading (`### LENS-1 claim`), so a malformed one is not skipped.
 And across the audit: the output directory, SCAN.md and at least one findings file exist; every lens
 SCAN.md says fires has a findings file; REPORT.md (when present) places every surviving finding id and
-comes with refuted.md; no id is both in findings and in refuted.md. Exit 1 on any problem.
+comes with refuted.md, and has a Fundamentals scorecard that names every fundamental in SKILL.md
+and says none `holds` that a surviving finding's probe breaks; no id is both in findings and in refuted.md.
+Exit 1 on any problem.
 This checks the shape and completeness of the output, not whether a finding is true.
 """
 import argparse
@@ -23,7 +25,7 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from scan import load_lenses, read_text  # noqa: E402  the lens files are the single source of probes
+from scan import load_fundamentals, load_lenses, read_text  # noqa: E402  the lens files and SKILL.md are the sources
 
 FIELDS = ("where", "probe", "scenario", "severity", "detectability", "verdict", "fix family")
 SEVERITY = {"critical", "high", "medium", "low"}
@@ -32,6 +34,7 @@ HEADING = re.compile(r"^### ([A-Z]+-\d+) (.+)$", re.MULTILINE)
 FIELD = re.compile(r"^- ([a-z ]+): (.+)$", re.MULTILINE)
 CLEAN = re.compile(r"^clean: ([a-z0-9-]+) [—-]+ (.+)$", re.MULTILINE)
 FIRES = re.compile(r"^- \*\*([a-z]+)\*\* fires", re.MULTILINE)
+SCORECARD = re.compile(r"^(#+) [^\n]*\bFundamentals\b[^\n]*$", re.MULTILINE | re.IGNORECASE)
 
 
 def parse(text):
@@ -99,7 +102,8 @@ def check_where(where, root):
 
 def verify(out, root, only):
     lenses = load_lenses()
-    problems, ids, counts, id_files = [], [], collections.Counter(), collections.defaultdict(list)
+    problems, ids, counts = [], [], collections.Counter()
+    id_files, broken_by = collections.defaultdict(list), collections.defaultdict(list)
     if not os.path.isdir(out):
         return [f"{out}: no such output directory, so no audit ran"], ids, counts, set()
     covered = collections.defaultdict(set)
@@ -124,6 +128,7 @@ def verify(out, root, only):
             covered[lens_name].add(f.get("probe"))
             ids.append(f["id"])
             id_files[f["id"]].append(f"findings/{name}")
+            broken_by[f"{lens_name}.{f.get('probe')}"].append(f["id"])
             counts[f.get("severity", "?").split()[0]] += 1  # parse() drops blank values, so this is never empty
         for probe, evidence in clean.items():
             if probe not in lens.probes:
@@ -140,7 +145,7 @@ def verify(out, root, only):
     scan_md = os.path.join(out, "SCAN.md")
     if os.path.isfile(scan_md):
         fired = set(FIRES.findall(read_text(scan_md)))
-        if not fired:  # seven lenses always fire and --lens names at least one, so scan.py's output never has none
+        if not fired:  # the always-on lenses fire in every scan and --lens names at least one, so scan.py's output never has none
             problems.append("SCAN.md names no lens that fires, so it is not scan.py's output and the lenses that "
                             "should have findings are unknown; write it with `scan.py <path> > SCAN.md`")
         problems += [f"lens {l} fires in SCAN.md but has no findings file" for l in sorted(fired - seen_lenses)
@@ -156,6 +161,7 @@ def verify(out, root, only):
     if os.path.isfile(report_md) and not only:
         report = read_text(report_md)
         problems += [f"REPORT.md does not place {i}" for i in ids if not mentions(report, i)]
+        problems += check_scorecard(report, broken_by)
         if refuted is None:
             problems.append("REPORT.md exists but refuted.md does not; write it, with `none` when nothing was refuted")
     if refuted and not only:
@@ -166,6 +172,26 @@ def verify(out, root, only):
                  "them so each has its own id, or merge two reports of one problem with an `also:` line"
                  for i, where in id_files.items() if len(where) > 1]
     return problems, ids, counts, seen_lenses
+
+
+def check_scorecard(report, broken_by):
+    """The report's Fundamentals section names every fundamental, and none `holds` while a finding breaks it."""
+    head = SCORECARD.search(report)
+    if not head:
+        return ["REPORT.md has no Fundamentals scorecard (a heading with 'Fundamentals', one line per rule)"]
+    rest = report[head.end():]
+    end = re.search(rf"^#{{1,{len(head.group(1))}}} ", rest, re.MULTILINE)
+    section = rest[:end.start()] if end else rest
+    problems = []
+    for fid, (_, refs) in load_fundamentals().items():
+        lines = [line for line in section.splitlines() if re.search(rf"(?<![\w-]){fid}(?!\d)", line)]
+        if not lines:
+            problems.append(f"REPORT.md scorecard does not score {fid}")
+            continue
+        breakers = [i for ref in refs for i in broken_by.get(ref, [])]
+        if breakers and any(re.search(r"\bholds\b", line, re.IGNORECASE) for line in lines):
+            problems.append(f"REPORT.md scorecard says {fid} holds, but {', '.join(breakers)} breaks it")
+    return problems
 
 
 def main():

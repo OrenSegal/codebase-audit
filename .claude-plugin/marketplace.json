@@ -10,8 +10,8 @@
     {
       "name": "codebase-audit",
       "source": "./",
-      "description": "Adversarial codebase audit that routes lenses by detected stack, has serious findings challenged by a refuter and clusters them by root cause, plus an untangle refactor.",
-      "version": "3.0.0",
+      "description": "Adversarial codebase audit against fourteen engineering fundamentals: routes lenses by detected stack, has serious findings challenged by a refuter, scores every fundamental and clusters findings by root cause, plus an untangle refactor.",
+      "version": "4.0.0",
       "license": "MIT"
     }
   ]

@@ -31,7 +31,7 @@ LOCAL_SIGNALS = os.path.join("docs", "agents", "audit-signals.tsv")
 TOOLS = os.path.join(HERE, "tools.tsv")
 
 KINDS = ("stack", "signal", "seed", "special")  # the row types of signals.tsv; any other would match nothing
-ALWAYS = ("types", "state", "failure", "security", "performance", "tests", "design")
+ALWAYS = ("correctness", "types", "state", "failure", "security", "performance", "tests", "design")
 SEQUENTIAL_MAX_FILES = 150   # at or below this many source files, subagents cost more than they save
 SHARD_SHARE = 0.15           # a package gets its own shard of a lens when it holds this share of its sites
 MAX_SHARDS_PER_LENS = 4
@@ -55,6 +55,9 @@ LOCKFILES = {"package-lock.json", "pnpm-lock.yaml", "yarn.lock", "Cargo.lock", "
 FIXTURE_PATH = re.compile(r"(^|/)(fixtures?|__fixtures__|__snapshots__|testdata|test-data)/")
 PROBE_LINE = re.compile(r"^- \*\*([a-z0-9-]+)\*\*( \(when [^)]+\))?:", re.MULTILINE)
 FIRES_LINE = re.compile(r"^Fires: (always|when .+)$", re.MULTILINE)
+FUNDAMENTAL_ROW = re.compile(r"^\| (F\d+) \| (.+) \| (.+) \|$", re.MULTILINE)
+PROBE_REF = re.compile(r"`([a-z]+)\.([a-z0-9-]+)`")
+SKILL_MD = os.path.join(os.path.dirname(HERE), "SKILL.md")
 
 
 def read_text(path):
@@ -127,6 +130,12 @@ def load_lenses():
             lenses[name[:-3]] = Lens(name[:-3], fires.group(1) if fires else "",
                                      tuple(p for p, _ in found), frozenset(p for p, when in found if when))
     return lenses
+
+
+def load_fundamentals(path=SKILL_MD):
+    """{id: (statement, (lens.probe, ...))} from the Fundamentals table in SKILL.md, their one home."""
+    return {fid: (statement, tuple(f"{lens}.{probe}" for lens, probe in PROBE_REF.findall(cell)))
+            for fid, statement, cell in FUNDAMENTAL_ROW.findall(read_text(path))}
 
 
 @dataclasses.dataclass(frozen=True)
@@ -518,8 +527,18 @@ def cmd_check(a):
             problems.append(f"{row.origin}: seed {row.id} names no probe in lenses/{row.lens}.md")
     problems += [f"ALWAYS lens '{l}' has no lenses/{l}.md" for l in ALWAYS if l not in lenses]
     problems += [f"{t.origin}: tool {t.name} feeds unknown lens '{t.lens}'" for t in load_tools() if t.lens not in lenses]
+    fundamentals = load_fundamentals()
+    if not fundamentals:
+        problems.append("SKILL.md: no Fundamentals table (rows like '| F1 | statement | `lens.probe`, ... |')")
+    known = {f"{name}.{p}" for name, lens in lenses.items() for p in lens.probes}
+    cited = collections.Counter(ref for _, refs in fundamentals.values() for ref in refs)
+    for fid, (_, refs) in fundamentals.items():
+        problems += [f"SKILL.md {fid}: names {ref}, which no lens file has" for ref in refs if ref not in known]
+    problems += [f"SKILL.md: probe {ref} tests no fundamental; add it to one row" for ref in sorted(known - set(cited))]
+    problems += [f"SKILL.md: probe {ref} is under {n} fundamentals; keep it under one" for ref, n in cited.items() if n > 1]
     n_probes = sum(len(l.probes) for l in lenses.values())
-    print("\n".join(problems) or f"ok: {len(rows)} rows, {len(lenses)} lenses, {n_probes} probes")
+    print("\n".join(problems) or f"ok: {len(rows)} rows, {len(lenses)} lenses, {n_probes} probes, "
+                                 f"{len(fundamentals)} fundamentals")
     return 1 if problems else 0
 
 

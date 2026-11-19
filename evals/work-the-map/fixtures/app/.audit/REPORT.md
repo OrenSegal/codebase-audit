@@ -1,5 +1,21 @@
 # Audit report
 
+## Fundamentals
+- F1 not checked: the run was `--lens money,state`
+- F2 not checked: the run was `--lens money,state`
+- F3 not checked: the run was `--lens money,state`
+- F4 broken: MONEY-1, STATE-1, MONEY-2
+- F5 not checked: the run was `--lens money,state`
+- F6 not checked: the run was `--lens money,state`
+- F7 not checked: the run was `--lens money,state`
+- F8 not checked: the run was `--lens money,state`
+- F9 not checked: the run was `--lens money,state`
+- F10 not checked: the run was `--lens money,state`
+- F11 not checked: the run was `--lens money,state`
+- F12 not checked: the run was `--lens money,state`
+- F13 not checked: the run was `--lens money,state`
+- F14 not checked: the run was `--lens money,state`
+
 ## Summary
 3 findings: 1 critical, 1 high, 1 medium. Fix first: webhook hardening.
 
