@@ -87,6 +87,8 @@ Every argument, including `--fix` and `--out DIR`, is defined in step 1 of `skil
 claude -p "/codebase-audit:audit --since origin/main" --allowedTools "Read,Grep,Glob,Write,Edit,Agent,Bash(python3 *),Bash(git *)" && python3 "$PLUGIN_DIR/skills/audit/scripts/verify.py" .audit
 ```
 
+**Model.** Run the leader on Opus. For the root-cause clustering and the untangle step, Fable gives the best result (`/model fable`). Refuters should run on a different model from the hunters, because agreement between two runs of the same model is weak evidence.
+
 ## The pipeline
 
 | Phase | What happens | Checked by |
